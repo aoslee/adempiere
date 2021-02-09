@@ -316,7 +316,7 @@ public class CalloutInvoice extends CalloutEngine
 		boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
 		int C_BPartner_ID = Env.getContextAsInt(ctx, WindowNo, WindowNo, "C_BPartner_ID");
 		BigDecimal Qty = (BigDecimal)mTab.getValue("QtyInvoiced");
-		MProductPricing pp = new MProductPricing (M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx);
+		MProductPricing pp = new MProductPricing (M_Product_ID.intValue(), C_BPartner_ID, Qty, IsSOTrx, null);
 		//
 		int M_PriceList_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_ID");
 		pp.setM_PriceList_ID(M_PriceList_ID);
@@ -349,7 +349,6 @@ public class CalloutInvoice extends CalloutEngine
 		mTab.setValue("C_Currency_ID", new Integer(pp.getC_Currency_ID()));
 	//	mTab.setValue("Discount", pp.getDiscount());
 		mTab.setValue("C_UOM_ID", new Integer(pp.getC_UOM_ID()));
-		Env.setContext(ctx, WindowNo, "EnforcePriceLimit", pp.isEnforcePriceLimit() ? "Y" : "N");
 		Env.setContext(ctx, WindowNo, "DiscountSchema", pp.isDiscountSchema() ? "Y" : "N");
 		//
 		return tax (ctx, WindowNo, mTab, mField, value);
@@ -472,7 +471,7 @@ public class CalloutInvoice extends CalloutEngine
 		//
 		int C_Tax_ID = Tax.get(ctx, M_Product_ID, C_Charge_ID, billDate, shipDate,
 			AD_Org_ID, M_Warehouse_ID, billC_BPartner_Location_ID, shipC_BPartner_Location_ID,
-			Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y"));
+			Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y"),null);
 		log.info("Tax ID=" + C_Tax_ID);
 		//
 		if (C_Tax_ID == 0)
@@ -549,7 +548,7 @@ public class CalloutInvoice extends CalloutEngine
 			if (QtyInvoiced == null)
 				QtyInvoiced = QtyEntered;
 			boolean IsSOTrx = Env.getContext(ctx, WindowNo, "IsSOTrx").equals("Y");
-			MProductPricing pp = new MProductPricing (M_Product_ID, C_BPartner_ID, QtyInvoiced, IsSOTrx);
+			MProductPricing pp = new MProductPricing (M_Product_ID, C_BPartner_ID, QtyInvoiced, IsSOTrx, null);
 			pp.setM_PriceList_ID(M_PriceList_ID);
 			int	M_PriceList_Version_ID = Env.getContextAsInt(ctx, WindowNo, "M_PriceList_Version_ID");
 			pp.setM_PriceList_Version_ID(M_PriceList_Version_ID);
@@ -622,13 +621,7 @@ public class CalloutInvoice extends CalloutEngine
 		log.fine("amt = PriceEntered=" + PriceEntered + ", Actual" + PriceActual + ", Discount=" + Discount);
 		/* */
 
-		//	Check PriceLimit
-		String epl = Env.getContext(ctx, WindowNo, "EnforcePriceLimit");
-		boolean enforce = Env.isSOTrx(ctx, WindowNo) && epl != null && epl.equals("Y");
-		if (enforce && MRole.getDefault().isOverwritePriceLimit())
-			enforce = false;
-		//	Check Price Limit?
-		if (enforce && PriceLimit.doubleValue() != 0.0
+		if (MPriceList.isCheckPriceLimit(M_PriceList_ID) && PriceLimit.doubleValue() != 0.0
 		  && PriceActual.compareTo(PriceLimit) < 0)
 		{
 			PriceActual = PriceLimit;
@@ -657,10 +650,10 @@ public class CalloutInvoice extends CalloutEngine
 		log.info("amt = LineNetAmt=" + LineNetAmt);
 		mTab.setValue("LineNetAmt", LineNetAmt);
 
-		//	Calculate Tax Amount for PO
-		boolean IsSOTrx = "Y".equals(Env.getContext(Env.getCtx(), WindowNo, "IsSOTrx"));
-		if (!IsSOTrx)
-		{
+		//	Calculate Tax Amount for order
+		//boolean IsSOTrx = "Y".equals(Env.getContext(Env.getCtx(), WindowNo, "IsSOTrx"));
+		//if (!IsSOTrx)
+		//{
 			BigDecimal TaxAmt = Env.ZERO; // teo_sarca: [ 1656829 ] Problem when there is not tax selected in vendor invoice
 			if (mField.getColumnName().equals("TaxAmt"))
 			{
@@ -679,7 +672,7 @@ public class CalloutInvoice extends CalloutEngine
 			}
 			//	Add it up
 			mTab.setValue("LineTotalAmt", LineNetAmt.add(TaxAmt));
-		}
+		//}
 
 		return "";
 	}	//	amt
@@ -819,6 +812,4 @@ public class CalloutInvoice extends CalloutEngine
 		//
 		return "";
 	}	//	qty
-	
-	
 }	//	CalloutInvoice

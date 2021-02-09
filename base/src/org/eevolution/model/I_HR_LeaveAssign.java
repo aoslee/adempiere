@@ -1,8 +1,9 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
+ * Product: ADempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 2006-2017 ADempiere Foundation, All Rights Reserved.         *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
+ * or (at your option) any later version.										*
  * by the Free Software Foundation. This program is distributed in the hope   *
  * that it will be useful, but WITHOUT ANY WARRANTY, without even the implied *
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.           *
@@ -11,8 +12,7 @@
  * with this program, if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
- * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
- * or via info@compiere.org or http://www.compiere.org/license.html           *
+ * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 package org.eevolution.model;
 
@@ -23,7 +23,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for HR_LeaveAssign
  *  @author Adempiere (generated) 
- *  @version Release 3.8.0
+ *  @version Release 3.9.2
  */
 public interface I_HR_LeaveAssign 
 {
@@ -67,10 +67,25 @@ public interface I_HR_LeaveAssign
     public static final String COLUMNNAME_Balance = "Balance";
 
 	/** Set Balance	  */
-	public void setBalance (BigDecimal Balance);
+	public void setBalance (int Balance);
 
 	/** Get Balance	  */
-	public BigDecimal getBalance();
+	public int getBalance();
+
+    /** Column name C_BPartner_ID */
+    public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
+
+	/** Set Business Partner .
+	  * Identifies a Business Partner
+	  */
+	public void setC_BPartner_ID (int C_BPartner_ID);
+
+	/** Get Business Partner .
+	  * Identifies a Business Partner
+	  */
+	public int getC_BPartner_ID();
+
+	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -88,20 +103,18 @@ public interface I_HR_LeaveAssign
 	  */
 	public int getCreatedBy();
 
-    /** Column name C_Year_ID */
-    public static final String COLUMNNAME_C_Year_ID = "C_Year_ID";
+    /** Column name DateLastRun */
+    public static final String COLUMNNAME_DateLastRun = "DateLastRun";
 
-	/** Set Year.
-	  * Calendar Year
+	/** Set Date last run.
+	  * Date the process was last run.
 	  */
-	public void setC_Year_ID (int C_Year_ID);
+	public void setDateLastRun (Timestamp DateLastRun);
 
-	/** Get Year.
-	  * Calendar Year
+	/** Get Date last run.
+	  * Date the process was last run.
 	  */
-	public int getC_Year_ID();
-
-	public org.compiere.model.I_C_Year getC_Year() throws RuntimeException;
+	public Timestamp getDateLastRun();
 
     /** Column name HR_Employee_ID */
     public static final String COLUMNNAME_HR_Employee_ID = "HR_Employee_ID";
@@ -161,12 +174,12 @@ public interface I_HR_LeaveAssign
 	/** Set Number of Leaves Allocated.
 	  * Number of Leaves Allocated
 	  */
-	public void setNoOfLeavesAllocated (BigDecimal NoOfLeavesAllocated);
+	public void setNoOfLeavesAllocated (int NoOfLeavesAllocated);
 
 	/** Get Number of Leaves Allocated.
 	  * Number of Leaves Allocated
 	  */
-	public BigDecimal getNoOfLeavesAllocated();
+	public int getNoOfLeavesAllocated();
 
     /** Column name Processing */
     public static final String COLUMNNAME_Processing = "Processing";
@@ -183,12 +196,25 @@ public interface I_HR_LeaveAssign
 	/** Set Total of Leaves.
 	  * Total of Leaves
 	  */
-	public void setTotalLeaves (BigDecimal TotalLeaves);
+	public void setTotalLeaves (int TotalLeaves);
 
 	/** Get Total of Leaves.
 	  * Total of Leaves
 	  */
-	public BigDecimal getTotalLeaves();
+	public int getTotalLeaves();
+
+    /** Column name UUID */
+    public static final String COLUMNNAME_UUID = "UUID";
+
+	/** Set Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public void setUUID (String UUID);
+
+	/** Get Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public String getUUID();
 
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";
@@ -212,10 +238,36 @@ public interface I_HR_LeaveAssign
 	/** Set Used Leaves.
 	  * Used Leaves
 	  */
-	public void setUsedLeaves (BigDecimal UsedLeaves);
+	public void setUsedLeaves (int UsedLeaves);
 
 	/** Get Used Leaves.
 	  * Used Leaves
 	  */
-	public BigDecimal getUsedLeaves();
+	public int getUsedLeaves();
+
+    /** Column name ValidFrom */
+    public static final String COLUMNNAME_ValidFrom = "ValidFrom";
+
+	/** Set Valid from.
+	  * Valid from including this date (first day)
+	  */
+	public void setValidFrom (Timestamp ValidFrom);
+
+	/** Get Valid from.
+	  * Valid from including this date (first day)
+	  */
+	public Timestamp getValidFrom();
+
+    /** Column name ValidTo */
+    public static final String COLUMNNAME_ValidTo = "ValidTo";
+
+	/** Set Valid to.
+	  * Valid to including this date (last day)
+	  */
+	public void setValidTo (Timestamp ValidTo);
+
+	/** Get Valid to.
+	  * Valid to including this date (last day)
+	  */
+	public Timestamp getValidTo();
 }

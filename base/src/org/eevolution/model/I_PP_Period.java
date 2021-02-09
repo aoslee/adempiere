@@ -1,8 +1,9 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
+ * Product: ADempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 2006-2017 ADempiere Foundation, All Rights Reserved.         *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
+ * or (at your option) any later version.										*
  * by the Free Software Foundation. This program is distributed in the hope   *
  * that it will be useful, but WITHOUT ANY WARRANTY, without even the implied *
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.           *
@@ -11,8 +12,7 @@
  * with this program, if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
- * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
- * or via info@compiere.org or http://www.compiere.org/license.html           *
+ * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 package org.eevolution.model;
 
@@ -23,7 +23,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for PP_Period
  *  @author Adempiere (generated) 
- *  @version Release 3.8.0
+ *  @version Release 3.9.2
  */
 public interface I_PP_Period 
 {
@@ -118,28 +118,15 @@ public interface I_PP_Period
 	  */
 	public String getName();
 
-    /** Column name PeriodNo */
-    public static final String COLUMNNAME_PeriodNo = "PeriodNo";
-
-	/** Set Period No.
-	  * Unique Period Number
-	  */
-	public void setPeriodNo (int PeriodNo);
-
-	/** Get Period No.
-	  * Unique Period Number
-	  */
-	public int getPeriodNo();
-
     /** Column name PP_PeriodDefinition_ID */
     public static final String COLUMNNAME_PP_PeriodDefinition_ID = "PP_PeriodDefinition_ID";
 
-	/** Set Period Definition.
+	/** Set Current Period.
 	  * Period Definition, allows to define time cycles for the Operational Calendar
 	  */
 	public void setPP_PeriodDefinition_ID (int PP_PeriodDefinition_ID);
 
-	/** Get Period Definition.
+	/** Get Current Period.
 	  * Period Definition, allows to define time cycles for the Operational Calendar
 	  */
 	public int getPP_PeriodDefinition_ID();
@@ -159,6 +146,19 @@ public interface I_PP_Period
 	  */
 	public int getPP_Period_ID();
 
+    /** Column name PeriodNo */
+    public static final String COLUMNNAME_PeriodNo = "PeriodNo";
+
+	/** Set Period No.
+	  * Unique Period Number
+	  */
+	public void setPeriodNo (int PeriodNo);
+
+	/** Get Period No.
+	  * Unique Period Number
+	  */
+	public int getPeriodNo();
+
     /** Column name StartDate */
     public static final String COLUMNNAME_StartDate = "StartDate";
 
@@ -171,6 +171,19 @@ public interface I_PP_Period
 	  * First effective day (inclusive)
 	  */
 	public Timestamp getStartDate();
+
+    /** Column name UUID */
+    public static final String COLUMNNAME_UUID = "UUID";
+
+	/** Set Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public void setUUID (String UUID);
+
+	/** Get Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public String getUUID();
 
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";

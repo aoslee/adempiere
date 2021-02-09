@@ -31,8 +31,11 @@ package org.eevolution.process;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.util.Collection;
-import java.util.logging.Level;
+import java.util.Arrays;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.NoVendorForProductException;
@@ -44,7 +47,6 @@ import org.compiere.model.MOrg;
 import org.compiere.model.MProduct;
 import org.compiere.model.MProductPO;
 import org.compiere.model.MQuery;
-import org.compiere.model.MRefList;
 import org.compiere.model.MRequisition;
 import org.compiere.model.MRequisitionLine;
 import org.compiere.model.MStorage;
@@ -52,15 +54,12 @@ import org.compiere.model.MTable;
 import org.compiere.model.MUser;
 import org.compiere.model.MWarehouse;
 import org.compiere.model.PrintInfo;
-import org.compiere.model.Query;
 import org.compiere.model.X_C_BP_Group;
 import org.compiere.model.X_C_DocType;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportCtl;
 import org.compiere.print.ReportEngine;
 import org.compiere.process.DocAction;
-import org.compiere.process.ProcessInfoParameter;
-import org.compiere.process.SvrProcess;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
@@ -68,492 +67,367 @@ import org.compiere.wf.MWorkflow;
 import org.eevolution.engine.warehouse.WMRuleEngine;
 import org.eevolution.exceptions.NoBPartnerLinkedforOrgException;
 import org.eevolution.exceptions.NoPlantForWarehouseException;
-import org.eevolution.model.I_WM_InOutBoundLine;
 import org.eevolution.model.MDDOrder;
 import org.eevolution.model.MDDOrderLine;
 import org.eevolution.model.MPPMRP;
 import org.eevolution.model.MPPOrder;
-import org.eevolution.model.MPPOrderBOM;
 import org.eevolution.model.MPPProductBOM;
 import org.eevolution.model.MPPProductPlanning;
 import org.eevolution.model.MWMInOutBound;
 import org.eevolution.model.MWMInOutBoundLine;
 import org.eevolution.model.X_DD_Order;
-import org.eevolution.model.X_WM_InOutBound;
 
 /**
- *	
- *  @author victor.perez@e-evolution.com, www.e-evolution.com
- *  @version $Id: $
+ * @author victor.perez@e-evolution.com, www.e-evolution.com
+ * @version $Id: $
  */
-public class ReleaseInOutBound extends SvrProcess
-{	
-	/** Record ID */
-	protected int p_Record_ID = 0;	
-	protected int p_M_Locator_ID = 0;
-	protected String p_DocAction = null;
-	protected String p_DeliveryRule = null;
-	protected int p_C_DocType_ID = 0;
-	protected int p_WM_Area_Type_ID = 0;
-	protected int p_WM_Section_Type_ID = 0;
-	protected boolean p_IsPrintPickList = false;
-	protected boolean p_IsCreateSupply = false;
-	
-	private MLocator m_locator = null;
-	private int AD_User_ID = 0;
-	private Timestamp Today = new Timestamp (System.currentTimeMillis()); 
-	private MDDOrder order = null;
-	
-	/**
-	 * 	Get Parameters
-	 */
-	@Override
-	protected void prepare ()
-	{
-		AD_User_ID = Env.getAD_User_ID(getCtx());
-		p_Record_ID = getRecord_ID();
-		for (ProcessInfoParameter para:getParameter())
-		{
-			String name = para.getParameterName();
-			if (para.getParameter() == null)
-				;
-			else if (name.equals("WM_Area_Type_ID"))
-			{
-				p_WM_Area_Type_ID = para.getParameterAsInt();
-			}
-			else if (name.equals("WM_Section_Type_ID"))
-			{
-				p_WM_Section_Type_ID = para.getParameterAsInt();
-			}
-			else if (name.equals("DeliveryRule"))
-			{
-				p_DeliveryRule = (String)para.getParameter();
-			}
-			else if (name.equals("DocAction"))
-			{
-				p_DocAction = (String)para.getParameter();
-			}
-			else if (name.equals("C_DocType_ID"))
-			{
-				p_C_DocType_ID = para.getParameterAsInt();
-			}
-			else if (name.equals("M_Locator_ID"))
-			{
-				p_M_Locator_ID = para.getParameterAsInt();
-				m_locator = new MLocator(getCtx(), p_M_Locator_ID, get_TrxName());
-			}
-			else if (name.equals("IsPrintPickList"))
-			{
-				p_IsPrintPickList = "Y".equals(para.getParameter());
-			}
-			else if (name.equals("IsCreateSupply"))
-			{
-				p_IsCreateSupply = "Y".equals(para.getParameter());
-			}
-			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
-		}
-	}
+public class ReleaseInOutBound extends ReleaseInOutBoundAbstract {
+    private Timestamp today = new Timestamp(System.currentTimeMillis());
+    private MDDOrder orderDistribution;
 
-	/**
-	 * 	Process - Generate Export Format
-	 *	@return info
-	 */
-	@Override
-	@SuppressWarnings("unchecked")
-	protected String doIt () throws Exception
-	{
-		String whereClause = "EXISTS (SELECT T_Selection_ID FROM T_Selection WHERE  T_Selection.AD_PInstance_ID=? AND T_Selection.T_Selection_ID=WM_InOutBoundLine.WM_InOutboundLine_ID)";		
-		Collection <MWMInOutBoundLine> lines = new Query(getCtx(), I_WM_InOutBoundLine.Table_Name, whereClause, get_TrxName())
-										.setClient_ID()
-										.setParameters(new Object[]{getAD_PInstance_ID()})
-										.list();
-		
-		int seq = 10;
-		for (MWMInOutBoundLine boundline: lines)
-		{
-			MWMInOutBound bound = boundline.getParent();
-			if(X_WM_InOutBound.DOCSTATUS_Completed.equals(bound.getDocStatus()) 
-			|| X_WM_InOutBound.DOCSTATUS_Closed.equals(bound.getDocStatus())
-			|| X_WM_InOutBound.DOCSTATUS_Voided.equals(bound.getDocStatus()))
-			{
-				continue;
-			}
-			
-			if(boundline.isProcessed())
-			{
-				continue;
-			}
-			/*else
-			{
-				bound.completeIt();
-				bound.saveEx();
-			}*/
-			
-			BigDecimal QtySupply = createDDOrder(boundline);
-			
-			if(p_IsCreateSupply && QtySupply.signum() > 0)
-			{
-				Env.setContext(boundline.getCtx(),"IsCreateSupply", "Y");
-				createSupply(boundline, QtySupply);
-			}
-			seq ++;
-		}
-		
-		if(order != null && p_DocAction != null)
-		{
-			order.setDocAction(p_DocAction);
-			order.setDocStatus(DocAction.STATUS_InProgress);
-			order.completeIt();
-			order.save();
-		}	
-		
-		if(p_IsPrintPickList && order != null)
-		{
-			// Get Format & Data
-			ReportEngine re = this.getReportEngine("DistributionOrder_Header  ** TEMPLATE **","DD_Order_Header_v", order.getDD_Order_ID());
-			if(re == null )
-			{
-				return"";
-			}
-			ReportCtl.preview(re);
-			re.print(); // prints only original
-		}
-		
-		return "" ;//@DocumentNo@ " + order.getDocumentNo();
-	}
+    /**
+     * Get Parameters
+     */
+    @Override
+    protected void prepare() {
+        super.prepare();
+    }
 
-	
-	/**
-	 * create Distribution Order as Pick List
-	 * @param boundline Out bound Line
-	 * @return Quantity that was not covert for inventory
-	 */
-	protected BigDecimal createDDOrder(MWMInOutBoundLine boundline)
-	{				
-		WMRuleEngine engineRule = WMRuleEngine.get();
-		Collection<MStorage> storages = engineRule.getMStorage(boundline, p_WM_Area_Type_ID, p_WM_Section_Type_ID);
-		
-		int M_Shipper_ID = 0;
-		BigDecimal qtySupply = Env.ZERO;
-		if(storages != null && storages.size() > 0)
-		{	
-			//get the warehouse in transit
-			MWarehouse[] wsts = MWarehouse.getInTransitForOrg(getCtx(), m_locator.getAD_Org_ID());
-			if (wsts == null || wsts.length == 0)
-			{	
-				throw new AdempiereException("Do not exist Transit Warehouse");
-			}
+    /**
+     * Process - Generate Export Format
+     *
+     * @return info
+     */
+    @Override
+    protected String doIt() throws Exception {
+        MLocator outBoundLocator = Optional.ofNullable(new MLocator(getCtx(), getLocatorId(), get_TrxName())).orElseThrow(() -> new AdempiereException("@M_Locator_ID@ @NotFound@"));
+        List<MWMInOutBoundLine> outBoundLines = (List<MWMInOutBoundLine>) getInstancesForSelection(get_TrxName());
+        Hashtable<Integer, MWMInOutBound> outboundOrders = new Hashtable<>();
+        //Complete Outbound Order
+        outBoundLines.forEach(outboundLine -> {
+            outboundLine.setM_LocatorTo_ID(outBoundLocator.getM_Locator_ID());
+            outboundLine.saveEx();
+            MWMInOutBound outboundOrder = outboundLine.getParent();
+            if (!outboundOrders.contains(outboundOrder.get_ID()))
+                outboundOrders.put(outboundOrder.get_ID(), outboundOrder);
+        });
+        // Complete selected order
+        outboundOrders.forEach((key, outboundOrder) -> {
+            if (DocAction.STATUS_Drafted.equals(outboundOrder.getDocStatus()) || DocAction.STATUS_InProgress.equals(outboundOrder.getDocStatus())) {
+                outboundOrder.setDocAction(DocAction.ACTION_Complete);
+                outboundOrder.processIt(DocAction.ACTION_Complete);
+                outboundOrder.saveEx();
+            }
+        });
 
-			//Org Must be linked to BPartner
-			MOrg org = MOrg.get(getCtx(),  m_locator.getAD_Org_ID());
-			int C_BPartner_ID = org.getLinkedC_BPartner_ID(get_TrxName()); 
-			if (C_BPartner_ID == 0)
-			{
-				throw new NoBPartnerLinkedforOrgException (org);
-			}
-				
-			MBPartner bp = MBPartner.get(getCtx(), C_BPartner_ID);
-			
-			if(order == null)
-			{
-				order = new MDDOrder(getCtx() , 0 , get_TrxName());
-				order.setAD_Org_ID(m_locator.getAD_Org_ID());
-				order.setC_BPartner_ID(C_BPartner_ID);
-				if(p_C_DocType_ID > 0)
-				{	
-					order.setC_DocType_ID(p_C_DocType_ID);
-				}	
-				else
-				{
-					order.setC_DocType_ID(MDocType.getDocType(X_C_DocType.DOCBASETYPE_DistributionOrder));
-				}
-				
-				order.setM_Warehouse_ID(wsts[0].get_ID());
-				if(p_DocAction != null)
-				{	
-					order.setDocAction(p_DocAction);
-				}
-				else
-				{
-					order.setDocAction(X_DD_Order.DOCACTION_Prepare);
-				}
-				
-				MUser[] users = MUser.getOfBPartner(getCtx(), bp.getC_BPartner_ID(), get_TrxName());
-				if (users == null || users.length == 0)
-				{	
-					throw new AdempiereException("Do not exist Users for this Business Partner"+ bp.getName());						
-				}
-				
-				order.setDateOrdered(getToday());                       
-				order.setDatePromised(getToday());
-		
-				order.setAD_User_ID(users[0].getAD_User_ID());
-				order.setM_Shipper_ID(M_Shipper_ID);	    	                
-				order.setIsInDispute(false);
-				order.setIsInTransit(false);
-				order.setSalesRep_ID(bp.getPrimaryAD_User_ID());
-				order.saveEx();
-			}
+        outBoundLines.forEach(outboundLine -> {
+            // if the locator is same to pick then the storage are in outbound locator not is necessary create other Distribution Order
+            if (outboundLine.getDD_OrderLine_ID() > 0) {
+                MDDOrderLine orderDistributionLine = (MDDOrderLine) outboundLine.getDD_OrderLine();
+                if (orderDistributionLine.getWM_InOutBoundLine_ID() <= 0) {
+                    orderDistributionLine.setWM_InOutBoundLine_ID(orderDistributionLine.getWM_InOutBoundLine_ID());
+                    orderDistributionLine.saveEx();
+                }
+                if (orderDistributionLine.getM_LocatorTo_ID() == outboundLine.getM_LocatorTo_ID())
+                    return;
+            }
+            BigDecimal qtySupply = createDistributionOrder(outboundLine);
+            if (isCreateSupply() && qtySupply.signum() > 0) {
+                Env.setContext(outboundLine.getCtx(), "IsCreateSupply", "Y");
+                createSupply(outboundLine, qtySupply);
+            }
+        });
 
-			for (MStorage storage: storages)
-			{			
-				MDDOrderLine oline = new MDDOrderLine(order);
-				oline.setM_Locator_ID(storage.getM_Locator_ID());
-				oline.setM_LocatorTo_ID(p_M_Locator_ID);
-				oline.setC_UOM_ID(boundline.getC_UOM_ID());
-				oline.setM_Product_ID(boundline.getM_Product_ID());
-				oline.setDateOrdered(getToday());                       
-				oline.setDatePromised(boundline.getPickDate());
-				oline.set_ValueOfColumn(I_WM_InOutBoundLine.COLUMNNAME_WM_InOutBoundLine_ID, boundline.getWM_InOutBoundLine_ID());
-				oline.setIsInvoiced(false);
-			
-				
-				if (boundline.getQtyToPick().subtract(qtySupply).compareTo(storage.getQtyOnHand()) < 0)
-				{
-					oline.setConfirmedQty(boundline.getQtyToPick());
-					oline.setQtyEntered(boundline.getQtyToPick());
-					oline.setQtyOrdered(boundline.getQtyToPick());
-					oline.setTargetQty(boundline.getQtyToPick());
-					qtySupply = qtySupply.add(boundline.getQtyToPick());					
-				}
-				else
-				{
-					oline.setConfirmedQty(storage.getQtyOnHand());
-					oline.setQtyEntered(storage.getQtyOnHand());
-					oline.setQtyOrdered(storage.getQtyOnHand());
-					oline.setTargetQty(storage.getQtyOnHand());						
-					qtySupply = qtySupply.add(storage.getQtyOnHand());				
-				}				
-				
-				oline.saveEx();
-			}
-		}
-		else
-		{
-			qtySupply = boundline.getQtyToPick().subtract(qtySupply);
-		}
-		return qtySupply;
-	}
-	
-	/**
-	 * Create supply based in Out bound Line 
-	 * @param boundline  Out bound Line 
-	 * @param qtySupply Quantity Supply
-	 */
-	public void createSupply(MWMInOutBoundLine boundline, BigDecimal qtySupply)
-	{
-		MProduct product = MProduct.get(boundline.getCtx(), boundline.getM_Product_ID());
-		if (product.isBOM())
-		{			
-			createMO(boundline, product , qtySupply);
-		}
-		else if(product.isPurchased())
-		{
-			createRequisition(boundline, product, qtySupply);
-		}
-	}
-	
-	/**
-	 * Create Requisition when the Is create supply is define as yes
-	 * @param product Product
-	 * @param QtyPlanned Qty Planned
-	 */
-	public  void createRequisition(MWMInOutBoundLine boundline, MProduct product, BigDecimal QtyPlanned)
-	{
-		//s_log.info("Create Requisition");
-		int C_BPartner_ID = 0;
-		int M_PriceList_ID = 0;
-		MProductPO po = null;
-		MProductPO[] ppos = MProductPO.getOfProduct(getCtx(), product.getM_Product_ID(), null);
-		for (MProductPO ppo : ppos)
-		{
-			if (ppo.isCurrentVendor() && ppo.getC_BPartner_ID() != 0)
-			{
-				C_BPartner_ID = ppo.getC_BPartner_ID();
-				po = ppo;
-				break;
-			}
-		}
-		
-		if (C_BPartner_ID == 0 && ppos.length > 0)
-		{
-			C_BPartner_ID = ppos[0].getC_BPartner_ID();
-		}
-		if (C_BPartner_ID == 0)
-		{
-			throw new NoVendorForProductException(product.getName());
-		}
-		
-		final String sql = "SELECT COALESCE(bp."+MBPartner.COLUMNNAME_PO_PriceList_ID
-		+",bpg."+X_C_BP_Group.COLUMNNAME_PO_PriceList_ID+")"
-		+" FROM C_BPartner bp"
-		+" INNER JOIN C_BP_Group bpg ON (bpg.C_BP_Group_ID=bp.C_BP_Group_ID)"
-		+" WHERE bp.C_BPartner_ID=?";
-		M_PriceList_ID = DB.getSQLValueEx(get_TrxName(), sql, C_BPartner_ID);
+        Optional.ofNullable(getDocAction()).flatMap(docAction -> Optional.ofNullable(orderDistribution)).ifPresent(order -> {
+            order.setDocAction(getDocAction());
+            order.processIt(DocAction.ACTION_Complete);
+            order.saveEx();
+        });
+        Optional.ofNullable(orderDistribution).ifPresent(order -> {
+            if (isPrintPickList()) {
+                // Get Format & Data
+                ReportEngine reportEngine = getReportEngine("DistributionOrder_Header  ** TEMPLATE **", "DD_Order_Header_v", orderDistribution.getDD_Order_ID());
+                if (reportEngine == null)
+                    throw new AdempiereException("@NotFound@ @AD_PrintFormat_ID@");
 
-		MRequisition req = new  MRequisition(getCtx(),0, get_TrxName()); 
-		req.setAD_Org_ID(m_locator.getAD_Org_ID());
-		req.setAD_User_ID(AD_User_ID);                                                        
-		req.setDateRequired(boundline.getPickDate());
-		req.setDescription("Generate from Outbound Order"); // TODO: add translation
-		req.setM_Warehouse_ID(m_locator.getM_Warehouse_ID());
-		req.setC_DocType_ID(MDocType.getDocType(MDocType.DOCBASETYPE_PurchaseRequisition));
-		if (M_PriceList_ID > 0)
-			req.setM_PriceList_ID(M_PriceList_ID);
-		req.saveEx();
+                ReportCtl.preview(reportEngine);
+                reportEngine.print(); // prints only original
+            }
+        });
+        Optional<String> createdDescription =  Optional.ofNullable(orderDistribution).map(order -> "@Created@ " + order.getDocumentInfo());
+        return createdDescription.orElse("");
+    }
 
-		MRequisitionLine reqline = new  MRequisitionLine(req);
-		reqline.setLine(10);
-		reqline.setAD_Org_ID(m_locator.getAD_Org_ID());
-		reqline.setC_BPartner_ID(C_BPartner_ID);
-		reqline.setM_Product_ID(product.getM_Product_ID());
-		reqline.setPrice();
-		reqline.setPriceActual(Env.ZERO);
-		reqline.setQty(QtyPlanned);
-		reqline.saveEx();
-		
-		MOrderLine oline = new MOrderLine(getCtx(), boundline.getC_OrderLine_ID(), get_TrxName());
-		oline.setDescription(oline.getDescription() 
-				+ " "
-				+ Msg.translate(getCtx(),MRequisition.COLUMNNAME_M_Requisition_ID) 
-				+ " : "
-				+ req.getDocumentNo());
-		oline.saveEx();
-		
-		boundline.setDescription(boundline.getDescription()
-				+ " "
-				+ Msg.translate(boundline.getCtx(), MRequisition.COLUMNNAME_M_Requisition_ID) 
-				+ " : "
-				+ req.getDocumentNo());
-	}
-	
-	/**
-	 * Create Manufacturing Order when the Is create supply is define as yes
-	 * @param boundline Bound Line
-	 * @param product Product
-	 * @param qtySupply Quantity to Supply
-	 */
-	public void createMO(MWMInOutBoundLine boundline, MProduct product, BigDecimal qtySupply)
-	{
-		MPPOrder order = MPPOrder.forC_OrderLine_ID(boundline.getCtx(), boundline.getC_OrderLine_ID(), product.get_ID(), boundline.get_TrxName());
-		if(order == null)
-		{	
-			MPPProductBOM bom = MPPProductBOM.getDefault(product, get_TrxName());
-			if (bom != null) 
-			{		
-				MPPProductPlanning pp = null;
-				//Validate the BOM based in planning data 
-				if(bom == null)
-				{
-					pp = MPPProductPlanning.find(getCtx(), boundline.getAD_Org_ID(), 0, 0, product.getM_Product_ID(), null); 
-					if(pp != null)
-					{	
-						bom = (MPPProductBOM) pp.getPP_Product_BOM();
-					}
-				}
-				if (bom != null) 
-				{		  
-					final int plant_id = MPPProductPlanning.getPlantForWarehouse(boundline.getM_Warehouse_ID());
-					if(plant_id <= 0)
-					{
-						throw new NoPlantForWarehouseException(boundline.getM_Warehouse_ID());
-					}
-					MWorkflow workflow = MWorkflow.get(getCtx(), MWorkflow.getWorkflowSearchKey(product));
-					//Validate the workflow based in planning data 						
-					if(workflow == null && pp != null)
-					{
-						workflow = pp.getAD_Workflow();
-					}
-					
-					if (plant_id > 0 && workflow != null)
-					{
-						String description = Msg.translate(getCtx(), MWMInOutBound.COLUMNNAME_WM_InOutBound_ID) 
-						+ " : "
-						+ boundline.getParent().getDocumentNo();
-						
-						//Create temporary Product Planning to Create Manufacturing Order 
-						pp = new MPPProductPlanning(getCtx(), 0 , get_TrxName());
-						pp.setAD_Org_ID(boundline.getAD_Org_ID());
-						pp.setM_Product_ID(product.getM_Product_ID());
-						pp.setPlanner_ID(boundline.getParent().getSalesRep_ID());
-						pp.setPP_Product_BOM_ID(bom.getPP_Product_BOM_ID());
-						pp.setAD_Workflow_ID(workflow.getAD_Workflow_ID());
-						pp.setM_Warehouse_ID(boundline.getM_Warehouse_ID());
-						pp.setS_Resource_ID(plant_id);
-						
-						order = MPPMRP.createMO( pp, 
-										boundline.getC_OrderLine_ID(),
-										boundline.getM_AttributeSetInstance_ID(), 
-										qtySupply, 
-										boundline.getPickDate(), 
-										boundline.getShipDate(),
-										description
-										);
-						MOrderLine oline = new MOrderLine(getCtx(), boundline.getC_OrderLine_ID(), get_TrxName());
-						
-						description = "";
-						if(oline.getDescription() != null)
-							description = oline.getDescription();
-						
-						description = description 
-									+ " "
-									+ Msg.translate(oline.getCtx(), MPPOrder.COLUMNNAME_PP_Order_ID) 
-									+ " : "
-								    + order.getDocumentNo();
-						oline.setDescription(description);
-						oline.saveEx();
-						
-						String boundDescription = "";
-						if(boundline.getDescription() != null)
-							boundDescription = boundline.getDescription();
-						
-						boundDescription = boundDescription 
-										 + " "
-										 + Msg.translate(getCtx(), MPPOrder.COLUMNNAME_PP_Order_ID) 
-										 + " : "
-										 + order.getDocumentNo();
-						boundline.setDescription(boundDescription);
-					}
-				}	
-			}	
-		}	
-		if(order != null)
-		{	
-			boundline.setProcessed(true);
-			boundline.saveEx();
-		}
-	}
-	
-	/*
-	 * get the a Report Engine Instance using the view table 
-	 * @param tableName
-	 */
-	private ReportEngine getReportEngine(String formatName, String tableName,int record_id)
-	{
-		// Get Format & Data
-		int format_id= MPrintFormat.getPrintFormat_ID(formatName, MTable.getTable_ID(tableName), getAD_Client_ID());
-		MPrintFormat format = MPrintFormat.get(getCtx(), format_id, true);
-		if (format == null)
-		{
-			addLog("@NotFound@ @AD_PrintFormat_ID@");
-			return null;
-		}
-		// query
-		MQuery query = new MQuery(tableName);
-		query.addRestriction("DD_Order_ID", MQuery.EQUAL, record_id);
-		// Engine
-		PrintInfo info = new PrintInfo(tableName,  MTable.getTable_ID(tableName), record_id);
-		ReportEngine re = new ReportEngine(getCtx(), format, query, info);
-		return re;
-	}
-	
-	/**
-	 * get Today
-	 * @return Today
-	 */
-	protected Timestamp getToday()
-	{
-		return this.Today;
-	}
+    /**
+     * create Distribution Order to performance a Pick List
+     *
+     * @param outboundLine Out bound Line
+     * @return Quantity that was not covert for inventory
+     */
+    private BigDecimal createDistributionOrder(MWMInOutBoundLine outboundLine) {
+        int shipperId = 0;
+        WMRuleEngine engineRule = WMRuleEngine.get();
+        List<MStorage> storageList = engineRule.getStorage(outboundLine, getAreaTypeId(), getSectionTypeId());
+        AtomicReference<BigDecimal> qtySupply = new AtomicReference<>(BigDecimal.ZERO);
+        if (storageList.size() > 0) {
+            //get the warehouse in transit
+            MLocator outboundLocator = MLocator.get(outboundLine.getCtx(), outboundLine.getM_LocatorTo_ID());
+            List<MWarehouse> transitWarehouse = Arrays.asList(MWarehouse.getInTransitForOrg(getCtx(), outboundLocator.getAD_Org_ID()));
+            if (transitWarehouse.isEmpty())
+                throw new AdempiereException("@M_Warehouse_ID@ @IsInTransit@ @NotFound@");
+
+            //Org Must be linked to BPartner
+            MOrg org = MOrg.get(getCtx(), outboundLocator.getAD_Org_ID());
+            int partnerId = org.getLinkedC_BPartner_ID(get_TrxName());
+            if (partnerId <= 0)
+                throw new NoBPartnerLinkedforOrgException(org);
+
+            MBPartner partner = MBPartner.get(getCtx(), partnerId);
+            if (orderDistribution == null) {
+                orderDistribution = new MDDOrder(getCtx(), 0, get_TrxName());
+                orderDistribution.setAD_Org_ID(outboundLocator.getAD_Org_ID());
+                orderDistribution.setC_BPartner_ID(partnerId);
+                orderDistribution.setDescription(Msg.parseTranslation(getCtx(), "@Generate@ @From@ " +outboundLine.getParent().getDocumentInfo()));
+                if (getDocTypeId() > 0)
+                    orderDistribution.setC_DocType_ID(getDocTypeId());
+                else
+                    orderDistribution.setC_DocType_ID(MDocType.getDocType(X_C_DocType.DOCBASETYPE_DistributionOrder));
+
+                orderDistribution.setM_Warehouse_ID(transitWarehouse.stream().findFirst().get().get_ID());
+                orderDistribution.setDocAction(Optional.ofNullable(getDocAction()).orElseGet(() -> X_DD_Order.DOCACTION_Prepare));
+                List<MUser> users = Arrays.asList(MUser.getOfBPartner(getCtx(), partner.getC_BPartner_ID(), get_TrxName()));
+                if (users.isEmpty())
+                    throw new AdempiereException("@AD_User_ID@ @NotFound@ @Value@ - @C_BPartner_ID@ : " + partner.getValue() + " - " + partner.getName());
+
+                orderDistribution.setAD_User_ID(users.stream().findFirst().get().getAD_User_ID());
+                orderDistribution.setDateOrdered(getToday());
+                orderDistribution.setDatePromised(getToday());
+                orderDistribution.setM_Shipper_ID(shipperId);
+                orderDistribution.setM_FreightCategory_ID(outboundLine.getParent().getM_FreightCategory_ID());
+                orderDistribution.setFreightCostRule(outboundLine.getParent().getFreightCostRule());
+                orderDistribution.setFreightAmt(outboundLine.getParent().getFreightAmt());
+                orderDistribution.setIsInDispute(false);
+                orderDistribution.setIsInTransit(false);
+                orderDistribution.setSalesRep_ID(getAD_User_ID());
+                orderDistribution.setDocStatus(MDDOrder.DOCSTATUS_Drafted);
+                orderDistribution.saveEx();
+            }
+
+            storageList.stream()
+                    .filter(storage -> storage.getQtyOnHand().signum() > 0)
+                    .forEach(storage -> {
+                            BigDecimal balanceQtyToPick = outboundLine.getQtyToPick().subtract(qtySupply.get());
+                            if (balanceQtyToPick.signum() > 0) {
+                                MDDOrderLine orderLine = new MDDOrderLine(orderDistribution);
+                                orderLine.setM_Locator_ID(storage.getM_Locator_ID());
+                                orderLine.setM_LocatorTo_ID(outboundLine.getM_LocatorTo_ID());
+                                orderLine.setC_UOM_ID(outboundLine.getC_UOM_ID());
+                                orderLine.setM_Product_ID(outboundLine.getM_Product_ID());
+                                orderLine.setDateOrdered(getToday());
+                                orderLine.setDatePromised(outboundLine.getPickDate());
+                                orderLine.setWM_InOutBoundLine_ID(outboundLine.getWM_InOutBoundLine_ID());
+                                orderLine.setIsInvoiced(false);
+
+                                if (balanceQtyToPick.compareTo(storage.getQtyOnHand()) < 0) {
+                                    orderLine.setConfirmedQty(outboundLine.getQtyToPick());
+                                    orderLine.setQtyEntered(outboundLine.getQtyToPick());
+                                    orderLine.setQtyOrdered(outboundLine.getQtyToPick());
+                                    orderLine.setTargetQty(outboundLine.getQtyToPick());
+                                    qtySupply.updateAndGet(supply -> supply.add(balanceQtyToPick));
+                                } else {
+                                    orderLine.setConfirmedQty(storage.getQtyOnHand());
+                                    orderLine.setQtyEntered(storage.getQtyOnHand());
+                                    orderLine.setQtyOrdered(storage.getQtyOnHand());
+                                    orderLine.setTargetQty(storage.getQtyOnHand());
+                                    qtySupply.updateAndGet(supply -> supply.add(storage.getQtyOnHand()));
+                                }
+                                if (qtySupply.get().signum() > 0) {
+                                    //Save the last location from a storage found
+                                    outboundLine.setM_Locator_ID(storage.getM_Locator_ID());
+                                    outboundLine.saveEx();
+                                }
+                                orderLine.setFreightAmt(outboundLine.getFreightAmt());
+                                orderLine.setM_FreightCategory_ID(outboundLine.getM_FreightCategory_ID());
+                                orderLine.setM_Shipper_ID(outboundLine.getM_Shipper_ID());
+                                orderLine.saveEx();
+                            }
+                    });
+        }
+        return outboundLine.getQtyToPick().subtract(qtySupply.get());
+    }
+
+    /**
+     * Create supply based in Out bound Line
+     *
+     * @param outBoundOrderLine Out bound Line
+     * @param qtySupply         Quantity Supply
+     */
+    private void createSupply(MWMInOutBoundLine outBoundOrderLine, BigDecimal qtySupply) {
+        Optional<MProduct> maybeProduct = Optional.ofNullable(MProduct.get(outBoundOrderLine.getCtx(), outBoundOrderLine.getM_Product_ID()));
+        maybeProduct.ifPresent(product -> {
+            if (product.isBOM())
+                createManufacturingOrder(outBoundOrderLine, product, qtySupply);
+            else if (product.isPurchased())
+                createRequisition(outBoundOrderLine, product, qtySupply);
+        });
+    }
+
+    /**
+     * Create Requisition when the Is create supply is define as yes
+     *
+     * @param outboundLine OutboundLine
+     * @param product      Product
+     * @param QtyPlanned   Qty Planned
+     */
+    private MRequisition createRequisition(MWMInOutBoundLine outboundLine, MProduct product, BigDecimal QtyPlanned) {
+        List<MProductPO> productPOs = Arrays.asList(MProductPO.getOfProduct(getCtx(), product.getM_Product_ID(), get_TrxName()));
+        Optional<MProductPO> maybeProductPO = productPOs.stream().filter(productPO -> productPO.isCurrentVendor() && productPO.getC_BPartner_ID() > 0).findFirst();
+        return maybeProductPO.map(productPO -> {
+            final String sql = "SELECT COALESCE(bp." + MBPartner.COLUMNNAME_PO_PriceList_ID
+                    + ",bpg." + X_C_BP_Group.COLUMNNAME_PO_PriceList_ID + ")"
+                    + " FROM C_BPartner bp"
+                    + " INNER JOIN C_BP_Group bpg ON (bpg.C_BP_Group_ID=bp.C_BP_Group_ID)"
+                    + " WHERE bp.C_BPartner_ID=?";
+            int priceListId = DB.getSQLValueEx(get_TrxName(), sql, productPO.getC_BPartner_ID());
+            MLocator outboundLocator = MLocator.get(outboundLine.getCtx(), outboundLine.getM_LocatorTo_ID());
+            MRequisition requisition = new MRequisition(getCtx(), 0, get_TrxName());
+            requisition.setAD_Org_ID(outboundLocator.getAD_Org_ID());
+            requisition.setAD_User_ID(getAD_User_ID());
+            requisition.setDateRequired(outboundLine.getPickDate());
+            requisition.setDescription(Msg.parseTranslation(getCtx(), "@Generated@ @From@ @WM_InOutBound_ID@"+outboundLine.getParent().getDocumentInfo()));
+            requisition.setM_Warehouse_ID(outboundLocator.getM_Warehouse_ID());
+            requisition.setC_DocType_ID(MDocType.getDocType(MDocType.DOCBASETYPE_PurchaseRequisition));
+            if (priceListId > 0)
+                requisition.setM_PriceList_ID(priceListId);
+            requisition.saveEx();
+
+            MRequisitionLine requisitionLine = new MRequisitionLine(requisition);
+            requisitionLine.setLine(10);
+            requisitionLine.setAD_Org_ID(outboundLocator.getAD_Org_ID());
+            requisitionLine.setC_BPartner_ID(productPO.getC_BPartner_ID());
+            requisitionLine.setM_Product_ID(product.getM_Product_ID());
+            requisitionLine.setPrice();
+            requisitionLine.setPriceActual(Env.ZERO);
+            requisitionLine.setQty(QtyPlanned);
+            requisitionLine.saveEx();
+
+
+            Optional<MOrderLine> maybeOrderLine = Optional.ofNullable(new MOrderLine(getCtx(), outboundLine.getC_OrderLine_ID(), get_TrxName()));
+            maybeOrderLine.ifPresent(orderLine -> {
+                StringBuilder descriptionLine = new StringBuilder(Optional.ofNullable(orderLine.getDescription()).orElse(""));
+                descriptionLine.append(" ").append(Msg.translate(getCtx(), MRequisition.COLUMNNAME_M_Requisition_ID)).append(" : ").append(requisition.getDocumentNo());
+                orderLine.setDescription(descriptionLine.toString());
+                orderLine.saveEx();
+                StringBuilder descriptionOutboundLine = new StringBuilder(Optional.ofNullable(outboundLine.getDescription()).orElse(""));
+                descriptionOutboundLine.append(" ").append(Msg.translate(outboundLine.getCtx(), MRequisition.COLUMNNAME_M_Requisition_ID)).append(" : ").append(requisition.getDocumentNo());
+                outboundLine.setDescription(descriptionOutboundLine.toString());
+                outboundLine.saveEx();
+            });
+            return requisition;
+        }).orElseThrow(() -> new NoVendorForProductException(""));
+    }
+
+    /**
+     * Create Manufacturing Order when the Is create supply is define as yes
+     *
+     * @param outBoundOrderLine Bound Line
+     * @param product           Product
+     * @param qtySupply         Quantity to Supply
+     * @return
+     */
+    private MPPOrder createManufacturingOrder(MWMInOutBoundLine outBoundOrderLine, MProduct product, BigDecimal qtySupply) {
+        Optional<MPPOrder> maybeOrder = Optional.ofNullable(
+                MPPOrder.forC_OrderLine_ID(outBoundOrderLine.getCtx(), outBoundOrderLine.getC_OrderLine_ID(),
+                        product.get_ID(),
+                        outBoundOrderLine.get_TrxName()));
+        return maybeOrder.map(order -> {
+            order.setM_Shipper_ID(outBoundOrderLine.getParent().getM_Shipper_ID());
+            order.setM_FreightCategory_ID(outBoundOrderLine.getParent().getM_FreightCategory_ID());
+            order.setFreightCostRule(outBoundOrderLine.getParent().getFreightCostRule());
+            return order;
+        }).orElseGet(() -> {
+            Optional<MPPProductPlanning> maybeProductPlanning = Optional.ofNullable(
+                    MPPProductPlanning.find(getCtx(), outBoundOrderLine.getAD_Org_ID(), outBoundOrderLine.getM_Warehouse_ID(), 0, product.getM_Product_ID(), get_TrxName())
+            );
+            // get Product BOM
+            MPPProductBOM bom = maybeProductPlanning.map(MPPProductPlanning::getPP_Product_BOM).orElseGet(() -> {
+                Optional<MPPProductBOM> maybeDefaultBOM = Optional.ofNullable(MPPProductBOM.getDefault(product, get_TrxName()));
+                return maybeDefaultBOM.orElseThrow(() -> new AdempiereException("@PP_Product_BOM_ID@ @NotFound@"));
+            });
+            // get Manufacturing Workflow
+            MWorkflow workflow = maybeProductPlanning.map(MPPProductPlanning::getAD_Workflow).orElseGet(() -> {
+                int workflowId =  MWorkflow.getWorkflowSearchKey(product);
+                Optional<MWorkflow> maybeWorkflow = Optional.ofNullable(workflowId > 0 ? MWorkflow.get(getCtx(), MWorkflow.getWorkflowSearchKey(product)) : null);
+                return maybeWorkflow.orElseThrow(() -> new AdempiereException("@AD_Workflow_ID@ @NotFound@ @To@ @M_Product_ID@  @Value@ : " + product.getValue() + " @Name@: " + product.getName()));
+            });
+
+            int plantId = MPPProductPlanning.getPlantForWarehouse(outBoundOrderLine.getM_Warehouse_ID());
+            if (plantId <= 0)
+                throw new NoPlantForWarehouseException(outBoundOrderLine.getM_Warehouse_ID());
+
+            StringBuilder description = new StringBuilder(Msg.parseTranslation(getCtx(), "@Generated@ @From@ @WM_InOutBound_ID@"));
+            description.append("  ").append(outBoundOrderLine.getParent().getDocumentInfo());
+            //Create temporary Product Planning to Create Manufacturing Order
+            MPPProductPlanning productPlanning = new MPPProductPlanning(getCtx(), 0, get_TrxName());
+            productPlanning.setAD_Org_ID(outBoundOrderLine.getAD_Org_ID());
+            productPlanning.setM_Product_ID(product.getM_Product_ID());
+            productPlanning.setPlanner_ID(outBoundOrderLine.getParent().getSalesRep_ID());
+            productPlanning.setPP_Product_BOM_ID(bom.getPP_Product_BOM_ID());
+            productPlanning.setAD_Workflow_ID(workflow.getAD_Workflow_ID());
+            productPlanning.setM_Warehouse_ID(outBoundOrderLine.getM_Warehouse_ID());
+            productPlanning.setS_Resource_ID(plantId);
+            MPPOrder order = MPPMRP.createMO(
+                    productPlanning,
+                    outBoundOrderLine.getC_OrderLine_ID(),
+                    outBoundOrderLine.getM_AttributeSetInstance_ID(),
+                    qtySupply,
+                    outBoundOrderLine.getPickDate(),
+                    outBoundOrderLine.getShipDate(),
+                    description.toString()
+            );
+            Optional<MOrderLine> maybeOrderLine = Optional.ofNullable(new MOrderLine(getCtx(), outBoundOrderLine.getC_OrderLine_ID(), get_TrxName()));
+            maybeOrderLine.ifPresent(orderLine -> {
+                Optional.ofNullable(orderLine.getDescription()).ifPresent(descriptionLine -> description.append(descriptionLine));
+                StringBuilder descriptionOrderLine = new StringBuilder(Msg.translate(orderLine.getCtx(), MPPOrder.COLUMNNAME_PP_Order_ID));
+                descriptionOrderLine.append(" : ").append(Optional.ofNullable(order.getDocumentNo()).orElse(""));
+                orderLine.setDescription(descriptionOrderLine.toString());
+                orderLine.saveEx();
+            });
+            StringBuilder boundDescription = new StringBuilder(Optional.ofNullable(outBoundOrderLine.getDescription()).orElse(""));
+            boundDescription.append(Msg.translate(getCtx(), MPPOrder.COLUMNNAME_PP_Order_ID)).append(" : ").append(Optional.ofNullable(order.getDocumentNo()).orElse(""));
+            outBoundOrderLine.setDescription(boundDescription.toString());
+            outBoundOrderLine.saveEx();
+            return order;
+        });
+    }
+
+    /*
+     * get the a Report Engine Instance using the view table
+     * @param tableName
+     */
+    private ReportEngine getReportEngine(String formatName, String tableName, int recordId) {
+        // Get Format & Data
+        int formatId = MPrintFormat.getPrintFormat_ID(formatName, MTable.getTable_ID(tableName), getAD_Client_ID());
+        Optional<MPrintFormat> maybeFormat = Optional.ofNullable(MPrintFormat.get(getCtx(), formatId, true));
+        return maybeFormat.map(format -> {
+            MQuery query = new MQuery(tableName);
+            query.addRestriction(MDDOrder.COLUMNNAME_DD_Order_ID, MQuery.EQUAL, recordId);
+            // Engine
+            PrintInfo info = new PrintInfo(tableName, MTable.getTable_ID(tableName), recordId);
+            ReportEngine reportEngine = new ReportEngine(getCtx(), format, query, info, get_TrxName());
+            return reportEngine;
+        }).orElseGet(() -> {
+            addLog("@NotFound@ @AD_PrintFormat_ID@");
+            return null;
+        });
+    }
+
+    /**
+     * get Today
+     *
+     * @return Today
+     */
+    protected Timestamp getToday() {
+        return this.today;
+    }
 }

@@ -30,14 +30,18 @@ package org.eevolution.model;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.compiere.model.I_C_OrderLine;
 import org.compiere.model.MBPartner;
-import org.compiere.model.MLocator;
+import org.compiere.model.MInvoiceLine;
 import org.compiere.model.MOrderLine;
 import org.compiere.model.MProduct;
 import org.compiere.model.Query;
 import org.compiere.util.CLogger;
+import org.compiere.util.Env;
 
 /**
  * Class Model for Inbound & Outbound Operation Line
@@ -47,6 +51,25 @@ import org.compiere.util.CLogger;
 public class MWMInOutBoundLine extends X_WM_InOutBoundLine 
 {
 
+	public static MWMInOutBoundLine getByInvoiceLine(MInvoiceLine invoiceLine)
+	{
+		StringBuilder whereClause = new StringBuilder();
+		whereClause.append(MWMInOutBoundLine.COLUMNNAME_C_InvoiceLine_ID).append("=?");
+		return new Query(invoiceLine.getCtx() , MWMInOutBoundLine.Table_Name, whereClause.toString() , invoiceLine.get_TrxName())
+				.setClient_ID()
+				.setParameters(invoiceLine.getC_InvoiceLine_ID())
+				.first();
+	}
+
+	public static MWMInOutBoundLine getByOrderLine(MOrderLine orderLine)
+	{
+		StringBuilder whereClause = new StringBuilder();
+		whereClause.append(MWMInOutBoundLine.COLUMNNAME_C_OrderLine_ID).append("=?");
+		return new Query(orderLine.getCtx() , MWMInOutBoundLine.Table_Name, whereClause.toString() , orderLine.get_TrxName())
+				.setClient_ID()
+				.setParameters(orderLine.getC_OrderLine_ID())
+				.first();
+	}
 	/**
 	 * 
 	 */
@@ -56,13 +79,16 @@ public class MWMInOutBoundLine extends X_WM_InOutBoundLine
 	private static CLogger	s_log = CLogger.getCLogger (MWMInOutBoundLine.class);
 	
 	/** Parent					*/
-	private MWMInOutBound		m_parent = null;
+	private MWMInOutBound parent = null;
 	/** Product 				*/
-	private MProduct 			m_product = null; 
+	private MProduct product = null;
 	/** MOrderLine orderLine 	*/ 
-	private MOrderLine 			m_orderLine = null;
+	private MOrderLine orderLine = null;
+
+	/** MOrderLine orderLine 	*/
+	private MInvoiceLine invoiceLine = null;
 	/** MBPartner BPartner	 	*/ 
-	private MBPartner			m_bpartner = null;
+	private MBPartner partner = null;
 	
 	
 	/**************************************************************************
@@ -76,6 +102,7 @@ public class MWMInOutBoundLine extends X_WM_InOutBoundLine
 		super (ctx, M_InOutBoundLine_ID, trxName);
 		if (M_InOutBoundLine_ID == 0)
 		{
+			setProcessed(false);
 		}
 	}
 
@@ -101,14 +128,37 @@ public class MWMInOutBoundLine extends X_WM_InOutBoundLine
 	}	//	MAsset
 
 	/**
-	 * 	Discontinued Asset Constructor - DO NOT USE (but don't delete either)
-	 *	@param ctx context
-	 *	@param M_InOutBoundLine_ID  In Out Bound Line ID
+	 * Constructor
+	 * @param inOutBound
 	 */
-	public MWMInOutBoundLine (MWMInOutBound bound)
+	public MWMInOutBoundLine (MWMInOutBound inOutBound)
 	{
-		this (bound.getCtx(), 0, bound.get_TrxName());
-		this.setWM_InOutBound_ID(bound.getWM_InOutBound_ID());
+		this (inOutBound.getCtx(), 0, inOutBound.get_TrxName());
+		this.setWM_InOutBound_ID(inOutBound.getWM_InOutBound_ID());
+	}
+
+	public MWMInOutBoundLine (MWMInOutBound inOutBound , MInvoiceLine invoiceLine)
+	{
+		this (inOutBound.getCtx(), 0, inOutBound.get_TrxName());
+		setWM_InOutBound_ID(inOutBound.get_ID());
+		setC_Invoice_ID(invoiceLine.getC_Invoice_ID());
+		setC_InvoiceLine_ID(invoiceLine.getC_InvoiceLine_ID());
+		setMovementQty(invoiceLine.getQtyInvoiced());
+		setM_Product_ID(invoiceLine.getM_Product_ID());
+		setC_Charge_ID(invoiceLine.getC_Charge_ID());
+		setC_UOM_ID(invoiceLine.getC_UOM_ID());
+	}
+
+	public MWMInOutBoundLine (MWMInOutBound inOutBound , MOrderLine orderLine)
+	{
+		this (inOutBound.getCtx(), 0, inOutBound.get_TrxName());
+		setWM_InOutBound_ID(inOutBound.get_ID());
+		setC_Order_ID(orderLine.getC_Order_ID());
+		setC_OrderLine_ID(orderLine.getC_OrderLine_ID());
+		setMovementQty(orderLine.getQtyOrdered().subtract(getQtyToDeliver()));
+		setM_Product_ID(orderLine.getM_Product_ID());
+		setC_Charge_ID(orderLine.getC_Charge_ID());
+		setC_UOM_ID(orderLine.getC_UOM_ID());
 	}
 	
 	/**
@@ -130,51 +180,41 @@ public class MWMInOutBoundLine extends X_WM_InOutBoundLine
 	 * get MInOutBound Order
 	 * @return  MInOutBound Order
 	 */
-	public MWMInOutBound getParent()
-	{
-		if (m_parent == null)
-			m_parent = new MWMInOutBound(getCtx(), getWM_InOutBound_ID(), get_TrxName());
-		return m_parent;
+	public MWMInOutBound getParent() {
+		return Optional.ofNullable(parent).orElseGet(() -> new MWMInOutBound(getCtx(), getWM_InOutBound_ID(), get_TrxName()));
 	}	//	getParent
 	
 	/**
 	 * 	Get Product
 	 *	@return product or null
 	 */
-	public MProduct getMProduct()
+	public MProduct getProduct()
 	{
-		if (m_product == null && getM_Product_ID() != 0)
-		{	
-			m_product =  MProduct.get (getCtx(), getM_Product_ID());
-		}
-		
-		return m_product;
+		return Optional.ofNullable(product).orElseGet(() -> MProduct.get (getCtx(), getM_Product_ID()));
 	}	//	getProduct
 	
 	/**
 	 * Get Sales Order Line
 	 * @return Sales Order line or null
 	 */
-	public MOrderLine getMOrderLine()
-	{
-		if(m_orderLine == null && getC_OrderLine_ID() != 0)
-		{	
-			m_orderLine = new MOrderLine(getCtx(), getC_OrderLine_ID(), get_TrxName());
-		}	
-		return m_orderLine;
+	public MOrderLine getOrderLine() {
+		return Optional.ofNullable(orderLine).orElseGet(() -> new MOrderLine(getCtx(), getC_OrderLine_ID(), get_TrxName()));
+	}
+
+	/**
+	 * Get Sales Order Line
+	 * @return Sales Order line or null
+	 */
+	public MInvoiceLine getInvoiceLine() {
+		return Optional.ofNullable(invoiceLine).orElseGet(() -> new MInvoiceLine(getCtx(), getC_InvoiceLine_ID(), get_TrxName()));
 	}
 	
 	/**
 	 * get Business Partner 
 	 * @return Business Partner or null
 	 */
-	public MBPartner getMBPartner()
-	{
-		if(m_bpartner == null && getMOrderLine().getC_BPartner_ID() != 0)
-		{	
-			m_bpartner = (MBPartner) getMOrderLine().getC_BPartner();
-		}	
-		return m_bpartner;
+	public MBPartner getBPartner() {
+		return Optional.ofNullable(partner).orElseGet(() -> (MBPartner) getOrderLine().getC_BPartner());
 	}
 
 	/**
@@ -190,25 +230,26 @@ public class MWMInOutBoundLine extends X_WM_InOutBoundLine
 	 * get Quantity to Ship
 	 * @return BigDecimal with Quantity to Ship
 	 */
-	public BigDecimal getQtyToDeliver()
-	{
-		MOrderLine oline = getMOrderLine();
-		return oline.getQtyOrdered().subtract(oline.getQtyDelivered());
+	public BigDecimal getQtyToDeliver() {
+		if(getC_OrderLine_ID() > 0) {
+			Optional<I_C_OrderLine> maybeOrderLine = Optional.ofNullable(getOrderLine());
+			AtomicReference<BigDecimal> quantityToDeliver = new AtomicReference<>(BigDecimal.ZERO);
+			maybeOrderLine.ifPresent( orderLine -> {
+				quantityToDeliver.set(orderLine.getQtyOrdered().subtract(orderLine.getQtyDelivered()));
+			});
+			return quantityToDeliver.get();
+		} else if(getDD_OrderLine_ID() != 0) {
+			Optional<I_DD_OrderLine> maybeOrderLine = Optional.ofNullable(getDD_OrderLine());
+			AtomicReference<BigDecimal> quantityToDeliver = new AtomicReference<>(BigDecimal.ZERO);
+			maybeOrderLine.ifPresent( orderLine -> {
+				quantityToDeliver.set(orderLine.getQtyOrdered().subtract(orderLine.getQtyDelivered()));
+			});
+			return quantityToDeliver.get();
+		}
+		//	Return
+		return Env.ZERO;
 	}
-	
-	/**
-	 * get MLocator based in Distribution Order Line
-	 * @return MLocator or null
-	 */
-	public MLocator getMLocator()
-	{
-		String whereClause =  MWMInOutBoundLine.COLUMNNAME_WM_InOutBoundLine_ID + "=?";
-		MDDOrderLine line = new Query(getCtx(),I_DD_OrderLine.Table_Name,whereClause, get_TrxName())
-		.setClient_ID().setParameters(new Object[]{getWM_InOutBoundLine_ID()})
-		.firstOnly();
-		return (MLocator) line.getM_LocatorTo();
-	}
-	
+
 	/**
 	 * get Warehouse
 	 * @return MWarehouse or null

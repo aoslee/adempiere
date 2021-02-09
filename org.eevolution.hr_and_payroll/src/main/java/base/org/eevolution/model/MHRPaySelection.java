@@ -145,6 +145,29 @@ public class MHRPaySelection extends X_HR_PaySelection
 		return sb.toString();
 	}	//	toString
 
-	
+
+    /**************************************************************************
+     * 	Before Save
+     *	@param newRecord new
+     *	@return save
+     */
+    protected boolean beforeSave (boolean newRecord)
+    {
+
+        //	Client/Org Check
+        if (getAD_Org_ID() == 0)
+        {
+            int context_AD_Org_ID = Env.getAD_Org_ID(getCtx());
+            if (context_AD_Org_ID != 0)
+            {
+                setAD_Org_ID(context_AD_Org_ID);
+                log.warning("Changed Org to Context=" + context_AD_Org_ID);
+            }
+        }
+
+        return true;
+    }
+
+
 	
 }	//	MHRPaySelection

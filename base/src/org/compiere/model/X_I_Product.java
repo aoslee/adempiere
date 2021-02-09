@@ -1,8 +1,9 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
+ * Product: ADempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 2006-2017 ADempiere Foundation, All Rights Reserved.         *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
+ * or (at your option) any later version.										*
  * by the Free Software Foundation. This program is distributed in the hope   *
  * that it will be useful, but WITHOUT ANY WARRANTY, without even the implied *
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.           *
@@ -11,8 +12,7 @@
  * with this program, if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
- * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
- * or via info@compiere.org or http://www.compiere.org/license.html           *
+ * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 /** Generated Model - DO NOT CHANGE */
 package org.compiere.model;
@@ -26,14 +26,14 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Model for I_Product
  *  @author Adempiere (generated) 
- *  @version Release 3.8.0 - $Id$ */
+ *  @version Release 3.9.2 - $Id$ */
 public class X_I_Product extends PO implements I_I_Product, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20150101L;
+	private static final long serialVersionUID = 20191120L;
 
     /** Standard Constructor */
     public X_I_Product (Properties ctx, int I_Product_ID, String trxName)
@@ -307,6 +307,23 @@ public class X_I_Product extends PO implements I_I_Product, I_Persistent
 		return (Timestamp)get_Value(COLUMNNAME_DiscontinuedAt);
 	}
 
+	/** Set Discontinued by.
+		@param DiscontinuedBy 
+		Discontinued By
+	  */
+	public void setDiscontinuedBy (Timestamp DiscontinuedBy)
+	{
+		set_Value (COLUMNNAME_DiscontinuedBy, DiscontinuedBy);
+	}
+
+	/** Get Discontinued by.
+		@return Discontinued By
+	  */
+	public Timestamp getDiscontinuedBy () 
+	{
+		return (Timestamp)get_Value(COLUMNNAME_DiscontinuedBy);
+	}
+
 	/** Set Document Note.
 		@param DocumentNote 
 		Additional information for a Document
@@ -462,6 +479,90 @@ public class X_I_Product extends PO implements I_I_Product, I_Persistent
 	public int getM_Product_Category_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_M_Product_Category_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_M_Product_Class getM_Product_Class() throws RuntimeException
+    {
+		return (org.compiere.model.I_M_Product_Class)MTable.get(getCtx(), org.compiere.model.I_M_Product_Class.Table_Name)
+			.getPO(getM_Product_Class_ID(), get_TrxName());	}
+
+	/** Set Product Class.
+		@param M_Product_Class_ID 
+		Class of a Product
+	  */
+	public void setM_Product_Class_ID (int M_Product_Class_ID)
+	{
+		if (M_Product_Class_ID < 1) 
+			set_Value (COLUMNNAME_M_Product_Class_ID, null);
+		else 
+			set_Value (COLUMNNAME_M_Product_Class_ID, Integer.valueOf(M_Product_Class_ID));
+	}
+
+	/** Get Product Class.
+		@return Class of a Product
+	  */
+	public int getM_Product_Class_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_M_Product_Class_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_M_Product_Classification getM_Product_Classification() throws RuntimeException
+    {
+		return (org.compiere.model.I_M_Product_Classification)MTable.get(getCtx(), org.compiere.model.I_M_Product_Classification.Table_Name)
+			.getPO(getM_Product_Classification_ID(), get_TrxName());	}
+
+	/** Set Product Classification.
+		@param M_Product_Classification_ID 
+		Classification of a Product
+	  */
+	public void setM_Product_Classification_ID (int M_Product_Classification_ID)
+	{
+		if (M_Product_Classification_ID < 1) 
+			set_Value (COLUMNNAME_M_Product_Classification_ID, null);
+		else 
+			set_Value (COLUMNNAME_M_Product_Classification_ID, Integer.valueOf(M_Product_Classification_ID));
+	}
+
+	/** Get Product Classification.
+		@return Classification of a Product
+	  */
+	public int getM_Product_Classification_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_M_Product_Classification_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_M_Product_Group getM_Product_Group() throws RuntimeException
+    {
+		return (org.compiere.model.I_M_Product_Group)MTable.get(getCtx(), org.compiere.model.I_M_Product_Group.Table_Name)
+			.getPO(getM_Product_Group_ID(), get_TrxName());	}
+
+	/** Set Product Group.
+		@param M_Product_Group_ID 
+		Group of a Product
+	  */
+	public void setM_Product_Group_ID (int M_Product_Group_ID)
+	{
+		if (M_Product_Group_ID < 1) 
+			set_Value (COLUMNNAME_M_Product_Group_ID, null);
+		else 
+			set_Value (COLUMNNAME_M_Product_Group_ID, Integer.valueOf(M_Product_Group_ID));
+	}
+
+	/** Get Product Group.
+		@return Group of a Product
+	  */
+	public int getM_Product_Group_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_M_Product_Group_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
@@ -725,6 +826,57 @@ public class X_I_Product extends PO implements I_I_Product, I_Persistent
 		return (String)get_Value(COLUMNNAME_ProductCategory_Value);
 	}
 
+	/** Set Product Class Key.
+		@param ProductClass_Value 
+		The key value for the product class
+	  */
+	public void setProductClass_Value (String ProductClass_Value)
+	{
+		set_Value (COLUMNNAME_ProductClass_Value, ProductClass_Value);
+	}
+
+	/** Get Product Class Key.
+		@return The key value for the product class
+	  */
+	public String getProductClass_Value () 
+	{
+		return (String)get_Value(COLUMNNAME_ProductClass_Value);
+	}
+
+	/** Set Product Classification Key.
+		@param ProductClassification_Value 
+		The key value for the product classification
+	  */
+	public void setProductClassification_Value (String ProductClassification_Value)
+	{
+		set_Value (COLUMNNAME_ProductClassification_Value, ProductClassification_Value);
+	}
+
+	/** Get Product Classification Key.
+		@return The key value for the product classification
+	  */
+	public String getProductClassification_Value () 
+	{
+		return (String)get_Value(COLUMNNAME_ProductClassification_Value);
+	}
+
+	/** Set Product Group Key.
+		@param ProductGroup_Value 
+		The key value for the product group
+	  */
+	public void setProductGroup_Value (String ProductGroup_Value)
+	{
+		set_Value (COLUMNNAME_ProductGroup_Value, ProductGroup_Value);
+	}
+
+	/** Get Product Group Key.
+		@return The key value for the product group
+	  */
+	public String getProductGroup_Value () 
+	{
+		return (String)get_Value(COLUMNNAME_ProductGroup_Value);
+	}
+
 	/** ProductType AD_Reference_ID=270 */
 	public static final int PRODUCTTYPE_AD_Reference_ID=270;
 	/** Item = I */
@@ -867,6 +1019,23 @@ public class X_I_Product extends PO implements I_I_Product, I_Persistent
 	public String getUPC () 
 	{
 		return (String)get_Value(COLUMNNAME_UPC);
+	}
+
+	/** Set Immutable Universally Unique Identifier.
+		@param UUID 
+		Immutable Universally Unique Identifier
+	  */
+	public void setUUID (String UUID)
+	{
+		set_Value (COLUMNNAME_UUID, UUID);
+	}
+
+	/** Get Immutable Universally Unique Identifier.
+		@return Immutable Universally Unique Identifier
+	  */
+	public String getUUID () 
+	{
+		return (String)get_Value(COLUMNNAME_UUID);
 	}
 
 	/** Set Units Per Pallet.

@@ -1,8 +1,9 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
+ * Product: ADempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 2006-2017 ADempiere Foundation, All Rights Reserved.         *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
+ * or (at your option) any later version.										*
  * by the Free Software Foundation. This program is distributed in the hope   *
  * that it will be useful, but WITHOUT ANY WARRANTY, without even the implied *
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.           *
@@ -11,8 +12,7 @@
  * with this program, if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
- * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
- * or via info@compiere.org or http://www.compiere.org/license.html           *
+ * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 /** Generated Model - DO NOT CHANGE */
 package org.compiere.model;
@@ -22,14 +22,14 @@ import java.util.Properties;
 
 /** Generated Model for AD_OrgInfo
  *  @author Adempiere (generated) 
- *  @version Release 3.8.0 - $Id$ */
+ *  @version Release 3.9.2 - $Id$ */
 public class X_AD_OrgInfo extends PO implements I_AD_OrgInfo, I_Persistent 
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20150101L;
+	private static final long serialVersionUID = 20191120L;
 
     /** Standard Constructor */
     public X_AD_OrgInfo (Properties ctx, int AD_OrgInfo_ID, String trxName)
@@ -264,7 +264,7 @@ public class X_AD_OrgInfo extends PO implements I_AD_OrgInfo, I_Persistent
 	  */
 	public void setM_Warehouse_ID (int M_Warehouse_ID)
 	{
-		if (M_Warehouse_ID < 1) 
+		if (M_Warehouse_ID < 0) 
 			set_Value (COLUMNNAME_M_Warehouse_ID, null);
 		else 
 			set_Value (COLUMNNAME_M_Warehouse_ID, Integer.valueOf(M_Warehouse_ID));
@@ -280,6 +280,39 @@ public class X_AD_OrgInfo extends PO implements I_AD_OrgInfo, I_Persistent
 			 return 0;
 		return ii.intValue();
 	}
+
+	public org.compiere.model.I_PA_Goal getPA_Goal() throws RuntimeException
+    {
+		return (org.compiere.model.I_PA_Goal)MTable.get(getCtx(), org.compiere.model.I_PA_Goal.Table_Name)
+			.getPO(getPA_Goal_ID(), get_TrxName());	}
+
+	/** Set Goal.
+		@param PA_Goal_ID 
+		Performance Goal
+	  */
+	public void setPA_Goal_ID (int PA_Goal_ID)
+	{
+		if (PA_Goal_ID < 1) 
+			set_Value (COLUMNNAME_PA_Goal_ID, null);
+		else 
+			set_Value (COLUMNNAME_PA_Goal_ID, Integer.valueOf(PA_Goal_ID));
+	}
+
+	/** Get Goal.
+		@return Performance Goal
+	  */
+	public int getPA_Goal_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_PA_Goal_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_AD_Org getParent_Org() throws RuntimeException
+    {
+		return (org.compiere.model.I_AD_Org)MTable.get(getCtx(), org.compiere.model.I_AD_Org.Table_Name)
+			.getPO(getParent_Org_ID(), get_TrxName());	}
 
 	/** Set Parent Organization.
 		@param Parent_Org_ID 
@@ -448,6 +481,98 @@ public class X_AD_OrgInfo extends PO implements I_AD_OrgInfo, I_Persistent
 	public int getTransferCashBook_ID () 
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_TransferCashBook_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	/** Set Immutable Universally Unique Identifier.
+		@param UUID 
+		Immutable Universally Unique Identifier
+	  */
+	public void setUUID (String UUID)
+	{
+		set_Value (COLUMNNAME_UUID, UUID);
+	}
+
+	/** Get Immutable Universally Unique Identifier.
+		@return Immutable Universally Unique Identifier
+	  */
+	public String getUUID () 
+	{
+		return (String)get_Value(COLUMNNAME_UUID);
+	}
+
+	public org.compiere.model.I_C_DocType getUnidentifiedAPDocType() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_DocType)MTable.get(getCtx(), org.compiere.model.I_C_DocType.Table_Name)
+			.getPO(getUnidentifiedAPDocType_ID(), get_TrxName());	}
+
+	/** Set Unidentified Document Type (AP).
+		@param UnidentifiedAPDocType_ID Unidentified Document Type (AP)	  */
+	public void setUnidentifiedAPDocType_ID (int UnidentifiedAPDocType_ID)
+	{
+		if (UnidentifiedAPDocType_ID < 1) 
+			set_Value (COLUMNNAME_UnidentifiedAPDocType_ID, null);
+		else 
+			set_Value (COLUMNNAME_UnidentifiedAPDocType_ID, Integer.valueOf(UnidentifiedAPDocType_ID));
+	}
+
+	/** Get Unidentified Document Type (AP).
+		@return Unidentified Document Type (AP)	  */
+	public int getUnidentifiedAPDocType_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_UnidentifiedAPDocType_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_C_DocType getUnidentifiedARDocType() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_DocType)MTable.get(getCtx(), org.compiere.model.I_C_DocType.Table_Name)
+			.getPO(getUnidentifiedARDocType_ID(), get_TrxName());	}
+
+	/** Set Unidentified Document Type (AR).
+		@param UnidentifiedARDocType_ID Unidentified Document Type (AR)	  */
+	public void setUnidentifiedARDocType_ID (int UnidentifiedARDocType_ID)
+	{
+		if (UnidentifiedARDocType_ID < 1) 
+			set_Value (COLUMNNAME_UnidentifiedARDocType_ID, null);
+		else 
+			set_Value (COLUMNNAME_UnidentifiedARDocType_ID, Integer.valueOf(UnidentifiedARDocType_ID));
+	}
+
+	/** Get Unidentified Document Type (AR).
+		@return Unidentified Document Type (AR)	  */
+	public int getUnidentifiedARDocType_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_UnidentifiedARDocType_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	public org.compiere.model.I_C_BPartner getUnidentifiedBPartner() throws RuntimeException
+    {
+		return (org.compiere.model.I_C_BPartner)MTable.get(getCtx(), org.compiere.model.I_C_BPartner.Table_Name)
+			.getPO(getUnidentifiedBPartner_ID(), get_TrxName());	}
+
+	/** Set Business Partner (Unidentified Payments).
+		@param UnidentifiedBPartner_ID Business Partner (Unidentified Payments)	  */
+	public void setUnidentifiedBPartner_ID (int UnidentifiedBPartner_ID)
+	{
+		if (UnidentifiedBPartner_ID < 1) 
+			set_Value (COLUMNNAME_UnidentifiedBPartner_ID, null);
+		else 
+			set_Value (COLUMNNAME_UnidentifiedBPartner_ID, Integer.valueOf(UnidentifiedBPartner_ID));
+	}
+
+	/** Get Business Partner (Unidentified Payments).
+		@return Business Partner (Unidentified Payments)	  */
+	public int getUnidentifiedBPartner_ID () 
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_UnidentifiedBPartner_ID);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();

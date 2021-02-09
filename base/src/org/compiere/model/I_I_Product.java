@@ -1,8 +1,9 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
+ * Product: ADempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 2006-2017 ADempiere Foundation, All Rights Reserved.         *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
+ * or (at your option) any later version.										*
  * by the Free Software Foundation. This program is distributed in the hope   *
  * that it will be useful, but WITHOUT ANY WARRANTY, without even the implied *
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.           *
@@ -11,8 +12,7 @@
  * with this program, if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
- * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
- * or via info@compiere.org or http://www.compiere.org/license.html           *
+ * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 package org.compiere.model;
 
@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for I_Product
  *  @author Adempiere (generated) 
- *  @version Release 3.8.0
+ *  @version Release 3.9.2
  */
 public interface I_I_Product 
 {
@@ -227,6 +227,19 @@ public interface I_I_Product
 	  */
 	public Timestamp getDiscontinuedAt();
 
+    /** Column name DiscontinuedBy */
+    public static final String COLUMNNAME_DiscontinuedBy = "DiscontinuedBy";
+
+	/** Set Discontinued by.
+	  * Discontinued By
+	  */
+	public void setDiscontinuedBy (Timestamp DiscontinuedBy);
+
+	/** Get Discontinued by.
+	  * Discontinued By
+	  */
+	public Timestamp getDiscontinuedBy();
+
     /** Column name DocumentNote */
     public static final String COLUMNNAME_DocumentNote = "DocumentNote";
 
@@ -345,6 +358,51 @@ public interface I_I_Product
 	public int getM_Product_Category_ID();
 
 	public org.compiere.model.I_M_Product_Category getM_Product_Category() throws RuntimeException;
+
+    /** Column name M_Product_Class_ID */
+    public static final String COLUMNNAME_M_Product_Class_ID = "M_Product_Class_ID";
+
+	/** Set Product Class.
+	  * Class of a Product
+	  */
+	public void setM_Product_Class_ID (int M_Product_Class_ID);
+
+	/** Get Product Class.
+	  * Class of a Product
+	  */
+	public int getM_Product_Class_ID();
+
+	public org.compiere.model.I_M_Product_Class getM_Product_Class() throws RuntimeException;
+
+    /** Column name M_Product_Classification_ID */
+    public static final String COLUMNNAME_M_Product_Classification_ID = "M_Product_Classification_ID";
+
+	/** Set Product Classification.
+	  * Classification of a Product
+	  */
+	public void setM_Product_Classification_ID (int M_Product_Classification_ID);
+
+	/** Get Product Classification.
+	  * Classification of a Product
+	  */
+	public int getM_Product_Classification_ID();
+
+	public org.compiere.model.I_M_Product_Classification getM_Product_Classification() throws RuntimeException;
+
+    /** Column name M_Product_Group_ID */
+    public static final String COLUMNNAME_M_Product_Group_ID = "M_Product_Group_ID";
+
+	/** Set Product Group.
+	  * Group of a Product
+	  */
+	public void setM_Product_Group_ID (int M_Product_Group_ID);
+
+	/** Get Product Group.
+	  * Group of a Product
+	  */
+	public int getM_Product_Group_ID();
+
+	public org.compiere.model.I_M_Product_Group getM_Product_Group() throws RuntimeException;
 
     /** Column name M_Product_ID */
     public static final String COLUMNNAME_M_Product_ID = "M_Product_ID";
@@ -509,6 +567,45 @@ public interface I_I_Product
 	/** Get Product Category Key	  */
 	public String getProductCategory_Value();
 
+    /** Column name ProductClass_Value */
+    public static final String COLUMNNAME_ProductClass_Value = "ProductClass_Value";
+
+	/** Set Product Class Key.
+	  * The key value for the product class
+	  */
+	public void setProductClass_Value (String ProductClass_Value);
+
+	/** Get Product Class Key.
+	  * The key value for the product class
+	  */
+	public String getProductClass_Value();
+
+    /** Column name ProductClassification_Value */
+    public static final String COLUMNNAME_ProductClassification_Value = "ProductClassification_Value";
+
+	/** Set Product Classification Key.
+	  * The key value for the product classification
+	  */
+	public void setProductClassification_Value (String ProductClassification_Value);
+
+	/** Get Product Classification Key.
+	  * The key value for the product classification
+	  */
+	public String getProductClassification_Value();
+
+    /** Column name ProductGroup_Value */
+    public static final String COLUMNNAME_ProductGroup_Value = "ProductGroup_Value";
+
+	/** Set Product Group Key.
+	  * The key value for the product group
+	  */
+	public void setProductGroup_Value (String ProductGroup_Value);
+
+	/** Get Product Group Key.
+	  * The key value for the product group
+	  */
+	public String getProductGroup_Value();
+
     /** Column name ProductType */
     public static final String COLUMNNAME_ProductType = "ProductType";
 
@@ -599,6 +696,19 @@ public interface I_I_Product
 	  * Bar Code (Universal Product Code or its superset European Article Number)
 	  */
 	public String getUPC();
+
+    /** Column name UUID */
+    public static final String COLUMNNAME_UUID = "UUID";
+
+	/** Set Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public void setUUID (String UUID);
+
+	/** Get Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public String getUUID();
 
     /** Column name UnitsPerPallet */
     public static final String COLUMNNAME_UnitsPerPallet = "UnitsPerPallet";

@@ -1,8 +1,9 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
+ * Product: ADempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 2006-2017 ADempiere Foundation, All Rights Reserved.         *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
+ * or (at your option) any later version.										*
  * by the Free Software Foundation. This program is distributed in the hope   *
  * that it will be useful, but WITHOUT ANY WARRANTY, without even the implied *
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.           *
@@ -11,8 +12,7 @@
  * with this program, if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
- * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
- * or via info@compiere.org or http://www.compiere.org/license.html           *
+ * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 package org.compiere.model;
 
@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_User
  *  @author Adempiere (generated) 
- *  @version Release 3.8.0
+ *  @version Release 3.9.2
  */
 public interface I_AD_User 
 {
@@ -49,6 +49,17 @@ public interface I_AD_User
 	  */
 	public int getAD_Client_ID();
 
+    /** Column name AD_EMailConfig_ID */
+    public static final String COLUMNNAME_AD_EMailConfig_ID = "AD_EMailConfig_ID";
+
+	/** Set EMail Configuration	  */
+	public void setAD_EMailConfig_ID (int AD_EMailConfig_ID);
+
+	/** Get EMail Configuration	  */
+	public int getAD_EMailConfig_ID();
+
+	public org.compiere.model.I_AD_EMailConfig getAD_EMailConfig() throws RuntimeException;
+
     /** Column name AD_OrgTrx_ID */
     public static final String COLUMNNAME_AD_OrgTrx_ID = "AD_OrgTrx_ID";
 
@@ -61,6 +72,8 @@ public interface I_AD_User
 	  * Performing or initiating organization
 	  */
 	public int getAD_OrgTrx_ID();
+
+	public org.compiere.model.I_AD_Org getAD_OrgTrx() throws RuntimeException;
 
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
@@ -361,6 +374,19 @@ public interface I_AD_User
 	  */
 	public String getHasRole();
 
+    /** Column name ImageURL */
+    public static final String COLUMNNAME_ImageURL = "ImageURL";
+
+	/** Set Image URL.
+	  * URL of  image
+	  */
+	public void setImageURL (String ImageURL);
+
+	/** Get Image URL.
+	  * URL of  image
+	  */
+	public String getImageURL();
+
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
 
@@ -400,6 +426,67 @@ public interface I_AD_User
 	  */
 	public boolean isInPayroll();
 
+    /** Column name IsIncludeOwnChanges */
+    public static final String COLUMNNAME_IsIncludeOwnChanges = "IsIncludeOwnChanges";
+
+	/** Set Notify me my own changes.
+	  * I want to be notified of changes that I make myself
+	  */
+	public void setIsIncludeOwnChanges (boolean IsIncludeOwnChanges);
+
+	/** Get Notify me my own changes.
+	  * I want to be notified of changes that I make myself
+	  */
+	public boolean isIncludeOwnChanges();
+
+    /** Column name IsInternalUser */
+    public static final String COLUMNNAME_IsInternalUser = "IsInternalUser";
+
+	/** Set Internal User.
+	  * Is just for use internal
+	  */
+	public void setIsInternalUser (boolean IsInternalUser);
+
+	/** Get Internal User.
+	  * Is just for use internal
+	  */
+	public boolean isInternalUser();
+
+    /** Column name IsLoginUser */
+    public static final String COLUMNNAME_IsLoginUser = "IsLoginUser";
+
+	/** Set Login User	  */
+	public void setIsLoginUser (boolean IsLoginUser);
+
+	/** Get Login User	  */
+	public boolean isLoginUser();
+
+    /** Column name IsProjectManager */
+    public static final String COLUMNNAME_IsProjectManager = "IsProjectManager";
+
+	/** Set Is Project Manager.
+	  * Is Project Manager
+	  */
+	public void setIsProjectManager (boolean IsProjectManager);
+
+	/** Get Is Project Manager.
+	  * Is Project Manager
+	  */
+	public boolean isProjectManager();
+
+    /** Column name IsProjectMember */
+    public static final String COLUMNNAME_IsProjectMember = "IsProjectMember";
+
+	/** Set Is Project Member.
+	  * Is Project Member
+	  */
+	public void setIsProjectMember (boolean IsProjectMember);
+
+	/** Get Is Project Member.
+	  * Is Project Member
+	  */
+	public boolean isProjectMember();
+
     /** Column name IsSalesLead */
     public static final String COLUMNNAME_IsSalesLead = "IsSalesLead";
 
@@ -412,6 +499,19 @@ public interface I_AD_User
 	  * This contact is a sales lead
 	  */
 	public boolean isSalesLead();
+
+    /** Column name IsWebstoreUser */
+    public static final String COLUMNNAME_IsWebstoreUser = "IsWebstoreUser";
+
+	/** Set Webstore User.
+	  * Is a user for Webstore
+	  */
+	public void setIsWebstoreUser (boolean IsWebstoreUser);
+
+	/** Get Webstore User.
+	  * Is a user for Webstore
+	  */
+	public boolean isWebstoreUser();
 
     /** Column name LDAPUser */
     public static final String COLUMNNAME_LDAPUser = "LDAPUser";
@@ -504,6 +604,15 @@ public interface I_AD_User
 	  */
 	public String getLeadStatusDescription();
 
+    /** Column name Logo_ID */
+    public static final String COLUMNNAME_Logo_ID = "Logo_ID";
+
+	/** Set Logo	  */
+	public void setLogo_ID (int Logo_ID);
+
+	/** Get Logo	  */
+	public int getLogo_ID();
+
     /** Column name Name */
     public static final String COLUMNNAME_Name = "Name";
 
@@ -578,6 +687,24 @@ public interface I_AD_User
 	/** Get Process Now	  */
 	public boolean isProcessing();
 
+    /** Column name RecentItemsMaxSaved */
+    public static final String COLUMNNAME_RecentItemsMaxSaved = "RecentItemsMaxSaved";
+
+	/** Set RecentItems Max Saved	  */
+	public void setRecentItemsMaxSaved (int RecentItemsMaxSaved);
+
+	/** Get RecentItems Max Saved	  */
+	public int getRecentItemsMaxSaved();
+
+    /** Column name RecentItemsMaxShown */
+    public static final String COLUMNNAME_RecentItemsMaxShown = "RecentItemsMaxShown";
+
+	/** Set RecentItems Max Shown	  */
+	public void setRecentItemsMaxShown (int RecentItemsMaxShown);
+
+	/** Get RecentItems Max Shown	  */
+	public int getRecentItemsMaxShown();
+
     /** Column name SalesRep_ID */
     public static final String COLUMNNAME_SalesRep_ID = "SalesRep_ID";
 
@@ -633,6 +760,19 @@ public interface I_AD_User
 	  * Name this entity is referred to as
 	  */
 	public String getTitle();
+
+    /** Column name UUID */
+    public static final String COLUMNNAME_UUID = "UUID";
+
+	/** Set Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public void setUUID (String UUID);
+
+	/** Get Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public String getUUID();
 
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";

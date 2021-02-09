@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 
 import org.compiere.model.MAccount;
-import org.compiere.model.MCharge;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAcctSchemaElement;
 import org.compiere.model.MAllocationHdr;
@@ -54,7 +53,9 @@ import org.compiere.util.Env;
  *  
  *  @author phib
  *  BF [ 2019262 ] Allocation posting currency gain/loss omits line reference
- *  
+ *  @author Yamel Senih, ysenih@erpya.com , http://www.erpya.com
+ *  Add support to unidentified payments
+ *  https://github.com/adempiere/adempiere/issues/2785
  */
 public class Doc_AllocationHdr extends Doc
 {
@@ -229,8 +230,11 @@ public class Doc_AllocationHdr extends Doc
 				//	Payment Only
 				  else if (line.getC_Invoice_ID() == 0 && line.getC_Payment_ID() != 0)
 				  {
-					fl = fact.createLine (line, getPaymentAcct(as, line.getC_Payment_ID()),
-						getC_Currency_ID(), line.getAmtSource(), null);
+					if (line.getAmtSource().signum() >= 0)
+						fl = fact.createLine (line, getPaymentAcct(as, line.getC_Payment_ID()), getC_Currency_ID(), line.getAmtSource(), null);
+					else
+						fl = fact.createLine (line, getPaymentAcct(as, line.getC_Payment_ID()), getC_Currency_ID(), null , line.getAmtSource().negate());
+
 					if (fl != null && payment != null)
 						fl.setAD_Org_ID(payment.getAD_Org_ID());
 				   }
@@ -308,8 +312,11 @@ public class Doc_AllocationHdr extends Doc
 				if (as.isAccrual())
 				{
 					bpAcct = getAccount(Doc.ACCTTYPE_C_Receivable, as);
-					fl = fact.createLine (line, bpAcct,
-						getC_Currency_ID(), null, allocationSource);		//	payment currency 
+					if (allocationSource.signum() >= 0)
+						fl = fact.createLine (line, bpAcct, getC_Currency_ID(), null, allocationSource);		//	payment currency
+					else
+						fl = fact.createLine (line, bpAcct, getC_Currency_ID(), allocationSource.negate() , null);		//	payment currency
+
 					if (fl != null)
 						allocationAccounted = fl.getAcctBalance().negate();
 					if (fl != null && invoice != null)
@@ -361,8 +368,11 @@ public class Doc_AllocationHdr extends Doc
 				if (as.isAccrual())
 				{
 					bpAcct = getAccount(Doc.ACCTTYPE_V_Liability, as);
-					fl = fact.createLine (line, bpAcct,
-						getC_Currency_ID(), allocationSource, null);		//	payment currency
+					if (allocationSource.signum() >= 0)
+						fl = fact.createLine (line, bpAcct, getC_Currency_ID(), allocationSource, null);		//	payment currency
+					else
+						fl = fact.createLine (line, bpAcct, getC_Currency_ID(), null , allocationSource.negate());		//	payment currency
+
 					if (fl != null)
 						allocationAccounted = fl.getAcctBalance();
 					if (fl != null && invoice != null)
@@ -571,7 +581,9 @@ public class Doc_AllocationHdr extends Doc
 				&& factLine.getUserElement1_ID() == prevFactLine.getUserElement1_ID()
 				&& factLine.getUserElement2_ID() == prevFactLine.getUserElement2_ID()
 				&& factLine.getUser1_ID() == prevFactLine.getUser1_ID() 
-				&& factLine.getUser2_ID() == prevFactLine.getUser2_ID());
+				&& factLine.getUser2_ID() == prevFactLine.getUser2_ID()
+				&& factLine.getUser3_ID() == prevFactLine.getUser3_ID()
+				&& factLine.getUser4_ID() == prevFactLine.getUser4_ID());
 	}
 
 	/**
@@ -621,55 +633,49 @@ public class Doc_AllocationHdr extends Doc
 	/**
 	 * 	Get Payment (Unallocated Payment or Payment Selection) Acct of Bank Account
 	 *	@param as accounting schema
-	 *	@param C_Payment_ID payment
+	 *	@param paymentId payment
 	 *	@return acct
 	 */
-	private MAccount getPaymentAcct (MAcctSchema as, int C_Payment_ID)
-	{
+	private MAccount getPaymentAcct (MAcctSchema as, int paymentId) {
 		setC_BankAccount_ID(0);
 		//	Doc.ACCTTYPE_UnallocatedCash (AR) or C_Prepayment 
 		//	or Doc.ACCTTYPE_PaymentSelect (AP) or V_Prepayment
 		int accountType = Doc.ACCTTYPE_UnallocatedCash;
 		//
-		String sql = "SELECT p.C_BankAccount_ID, d.DocBaseType, p.IsReceipt, p.IsPrepayment "
+		String sql = "SELECT p.C_BankAccount_ID, d.DocBaseType, p.IsReceipt, p.IsPrepayment, p.IsUnidentifiedPayment "
 			+ "FROM C_Payment p INNER JOIN C_DocType d ON (p.C_DocType_ID=d.C_DocType_ID) "
 			+ "WHERE C_Payment_ID=?";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
-		try
-		{
+		try {
 			pstmt = DB.prepareStatement (sql, getTrxName());
-			pstmt.setInt (1, C_Payment_ID);
-			rs = pstmt.executeQuery ();
-			if (rs.next ())
-			{
+			pstmt.setInt (1, paymentId);
+			rs = pstmt.executeQuery();
+			if (rs.next()) {
 				setC_BankAccount_ID(rs.getInt(1));
-				if (DOCTYPE_APPayment.equals(rs.getString(2)))
-					accountType = Doc.ACCTTYPE_PaymentSelect;
-				//	Prepayment
-				if ("Y".equals(rs.getString(4)))		//	Prepayment
-				{
-					if ("Y".equals(rs.getString(3)))	//	Receipt
-						accountType = Doc.ACCTTYPE_C_Prepayment;
-					else
-						accountType = Doc.ACCTTYPE_V_Prepayment;
+				if("Y".equals(rs.getString(5))) {
+					accountType = Doc.ACCTTYPE_BankUnidentified;
+				} else {
+					if (DOCTYPE_APPayment.equals(rs.getString(2)))
+						accountType = Doc.ACCTTYPE_PaymentSelect;
+					//	Prepayment
+					if ("Y".equals(rs.getString(4))) {	// Prepayment
+						if ("Y".equals(rs.getString(3)))	//	Receipt
+							accountType = Doc.ACCTTYPE_C_Prepayment;
+						else
+							accountType = Doc.ACCTTYPE_V_Prepayment;
+					}
 				}
 			}
- 		} 
-		catch (Exception e)
-		{
+ 		} catch (Exception e) {
 			log.log(Level.SEVERE, sql, e);
-		}
-		finally
-		{
+		} finally {
 			DB.close(rs, pstmt);
 			rs = null; pstmt = null;
 		}
-		
 		//
-		if (getC_BankAccount_ID() <= 0)
-		{
-			log.log(Level.SEVERE, "NONE for C_Payment_ID=" + C_Payment_ID);
+		if (getC_BankAccount_ID() <= 0) {
+			log.log(Level.SEVERE, "NONE for C_Payment_ID=" + paymentId);
 			return null;
 		}
 		return getAccount (accountType, as);
@@ -681,8 +687,7 @@ public class Doc_AllocationHdr extends Doc
 	 *	@param C_CashLine_ID
 	 *	@return acct
 	 */
-	private MAccount getCashAcct (MAcctSchema as, int C_CashLine_ID)
-	{
+	private MAccount getCashAcct (MAcctSchema as, int C_CashLine_ID) {
 		String sql = "SELECT c.C_CashBook_ID "
 			+ "FROM C_Cash c, C_CashLine cl "
 			+ "WHERE c.C_Cash_ID=cl.C_Cash_ID AND cl.C_CashLine_ID=?";
@@ -700,15 +705,15 @@ public class Doc_AllocationHdr extends Doc
 	 * 	Create Realized Gain & Loss.
 	 * 	Compares the Accounted Amount of the Invoice to the
 	 * 	Accounted Amount of the Allocation
-	 *	@param as accounting schema
+	 *	@param acctSchema accounting schema
 	 *	@param fact fact
-	 *	@param acct account
+	 *	@param account account
 	 *	@param invoice invoice
 	 *	@param allocationSource source amt
 	 *	@param allocationAccounted acct amt
 	 *	@return Error Message or null if OK
 	 */
-	private String createRealizedGainLoss (DocLine line, MAcctSchema as, Fact fact, MAccount acct,
+	private String createRealizedGainLoss (DocLine line, MAcctSchema acctSchema, Fact fact, MAccount account,
 		MInvoice invoice, BigDecimal allocationSource, BigDecimal allocationAccounted)
 	{
 		BigDecimal invoiceSource = null;
@@ -729,7 +734,7 @@ public class Doc_AllocationHdr extends Doc
 		{
 			pstmt = DB.prepareStatement(sql, getTrxName());
 			pstmt.setInt(1, invoice.getC_Invoice_ID());
-			pstmt.setInt(2, as.getC_AcctSchema_ID());
+			pstmt.setInt(2, acctSchema.getC_AcctSchema_ID());
 			rs = pstmt.executeQuery();
 			if (rs.next())
 			{
@@ -789,7 +794,7 @@ public class Doc_AllocationHdr extends Doc
 			if (acctDifference.abs().compareTo(TOLERANCE) < 0)
 				acctDifference = Env.ZERO;
 			//	Round
-			int precision = as.getStdPrecision();
+			int precision = acctSchema.getStdPrecision();
 			if (acctDifference.scale() > precision)
 				acctDifference = acctDifference.setScale(precision, BigDecimal.ROUND_HALF_UP);
 			String d2 = "(partial) = " + acctDifference + " - Multiplier=" + multiplier;
@@ -803,24 +808,24 @@ public class Doc_AllocationHdr extends Doc
 			return null;
 		}
 		
-		MAccount gain = MAccount.get (as.getCtx(), as.getAcctSchemaDefault().getRealizedGain_Acct());
-		MAccount loss = MAccount.get (as.getCtx(), as.getAcctSchemaDefault().getRealizedLoss_Acct());
+		MAccount gain = MAccount.getValidCombination (acctSchema.getCtx(), acctSchema.getAcctSchemaDefault().getRealizedGain_Acct() , getTrxName());
+		MAccount loss = MAccount.getValidCombination (acctSchema.getCtx(), acctSchema.getAcctSchemaDefault().getRealizedLoss_Acct() , getTrxName());
 		//
 		if (invoice.isSOTrx())
 		{
 			FactLine fl = fact.createLine (line, loss, gain, 
-				as.getC_Currency_ID(), acctDifference);
+				acctSchema.getC_Currency_ID(), acctDifference);
 			fl.setDescription(description);
-			fact.createLine (line, acct, 
-				as.getC_Currency_ID(), acctDifference.negate());
+			fact.createLine (line, account,
+				acctSchema.getC_Currency_ID(), acctDifference.negate());
 			fl.setDescription(description);
 		}
 		else
 		{
-			fact.createLine (line, acct,
-				as.getC_Currency_ID(), acctDifference);
+			fact.createLine (line, account,
+				acctSchema.getC_Currency_ID(), acctDifference);
 			FactLine fl = fact.createLine (line, loss, gain, 
-				as.getC_Currency_ID(), acctDifference.negate());
+				acctSchema.getC_Currency_ID(), acctDifference.negate());
 		}
 		return null;
 	}	//	createRealizedGainLoss

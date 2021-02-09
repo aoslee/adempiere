@@ -22,6 +22,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MAccount;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAcctSchemaElement;
@@ -178,13 +179,12 @@ public class Doc_MatchPO extends Doc
 		MProduct product = MProduct.get(getCtx(), getM_Product_ID());
 		MCostType ct =  MCostType.get(as, getM_Product_ID(), getAD_Org_ID());
 		String costingMethod = ct.getCostingMethod();
-		MInOutLine ioLine = MInOutLine.get(getCtx(), m_M_InOutLine_ID);
+		MInOutLine ioLine = new MInOutLine(getCtx(), m_M_InOutLine_ID , getTrxName());
 		BigDecimal costs = Env.ZERO;
-		for (MTransaction trx: MTransaction.getByInOutLine(ioLine))
+		for (MTransaction transaction: MTransaction.getByInOutLine(ioLine))
 		{
-		    String costingLevel = MProduct.get(getCtx(), trx.getM_Product_ID()).getCostingLevel(as, trx.getAD_Org_ID());
-		    MCostElement element = MCostElement.getByMaterialCostElementType(trx);
-		    MCostDetail cd = MCostDetail.getByTransaction(ioLine, trx, as.getC_AcctSchema_ID(), ct.getM_CostType_ID(), element.getM_CostElement_ID());
+		    MCostElement element = MCostElement.getByMaterialCostElementType(transaction);
+		    MCostDetail cd = MCostDetail.getByTransaction(ioLine, transaction, as.getC_AcctSchema_ID(), ct.getM_CostType_ID(), element.getM_CostElement_ID());
 		    if(cd != null)
 		    	costs =costs.add(MCostDetail.getTotalCost(cd, as));
 
@@ -193,12 +193,14 @@ public class Doc_MatchPO extends Doc
 		if (MCostType.COSTINGMETHOD_StandardCosting.equals(costingMethod))
 		{
 			//	No Costs yet - no PPV
-			if (costs == null || costs.signum() == 0)
-			{
-				p_Error = "Resubmit - No Costs for " + product.getName();
-				log.log(Level.SEVERE, p_Error);
-				return null;
-			}
+            if (costs == null || costs.signum() == 0)
+            {
+                // TODO make these a translatable message
+                p_Error = "No Standard Cost information was found for " + product.getName() +
+                        ".  Please add a standard cost for material and repost this document.";
+                log.log(Level.SEVERE, p_Error);
+                return null;
+            }
 	
 			//	Difference
 			BigDecimal difference = poCost.subtract(costs.setScale(as.getCostingPrecision(), BigDecimal.ROUND_HALF_UP));
@@ -225,6 +227,8 @@ public class Doc_MatchPO extends Doc
 				cr.setC_UOM_ID(m_oLine.getC_UOM_ID());
 				cr.setUser1_ID(m_oLine.getUser1_ID());
 				cr.setUser2_ID(m_oLine.getUser2_ID());
+				cr.setUser3_ID(m_oLine.getUser3_ID());
+				cr.setUser4_ID(m_oLine.getUser4_ID());
 			}
 	
 			//  PPV Offset
@@ -243,6 +247,8 @@ public class Doc_MatchPO extends Doc
 				dr.setC_UOM_ID(m_oLine.getC_UOM_ID());
 				dr.setUser1_ID(m_oLine.getUser1_ID());
 				dr.setUser2_ID(m_oLine.getUser2_ID());
+				dr.setUser3_ID(m_oLine.getUser3_ID());
+				dr.setUser4_ID(m_oLine.getUser4_ID());
 			}
 			
 			// Avoid usage of clearing accounts

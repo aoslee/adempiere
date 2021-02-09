@@ -19,14 +19,17 @@ package org.compiere.model;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.engine.IDocumentLine;
 import org.adempiere.exceptions.ProductNotOnPriceListException;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 
 /**
  *  Order Line Model.
@@ -50,7 +53,7 @@ import org.compiere.util.Msg;
  * 				invoice line for a product on a price list that includes tax, the net amount is
  * 				incorrectly calculated.
  */
-public class MOrderLine extends X_C_OrderLine
+public class MOrderLine extends X_C_OrderLine implements IDocumentLine
 {
 	/**
 	 * 
@@ -331,7 +334,7 @@ public class MOrderLine extends X_C_OrderLine
 	private MProductPricing getProductPricing (int M_PriceList_ID)
 	{
 		m_productPrice = new MProductPricing (getM_Product_ID(), 
-			getC_BPartner_ID(), getQtyOrdered(), m_IsSOTrx);
+			getC_BPartner_ID(), getQtyOrdered(), m_IsSOTrx, null);
 		m_productPrice.setM_PriceList_ID(M_PriceList_ID);
 		m_productPrice.setPriceDate(getDateOrdered());
 		//
@@ -348,7 +351,7 @@ public class MOrderLine extends X_C_OrderLine
 		int ii = Tax.get(getCtx(), getM_Product_ID(), getC_Charge_ID(), getDateOrdered(), getDateOrdered(),
 			getAD_Org_ID(), getM_Warehouse_ID(),
 			getC_BPartner_Location_ID(),		//	should be bill to
-			getC_BPartner_Location_ID(), m_IsSOTrx);
+			getC_BPartner_Location_ID(), m_IsSOTrx, get_TrxName());
 		if (ii == 0)
 		{
 			log.log(Level.SEVERE, "No Tax found");
@@ -577,66 +580,6 @@ public class MOrderLine extends X_C_OrderLine
 		//	We can change
 		return true;
 	}	//	canChangeWarehouse
-	
-	/**
-	 * 	Get C_Project_ID
-	 *	@return project
-	 */
-	public int getC_Project_ID()
-	{
-		int ii = super.getC_Project_ID ();
-		if (ii == 0)
-			ii = getParent().getC_Project_ID();
-		return ii;
-	}	//	getC_Project_ID
-	
-	/**
-	 * 	Get C_Activity_ID
-	 *	@return Activity
-	 */
-	public int getC_Activity_ID()
-	{
-		int ii = super.getC_Activity_ID ();
-		if (ii == 0)
-			ii = getParent().getC_Activity_ID();
-		return ii;
-	}	//	getC_Activity_ID
-	
-	/**
-	 * 	Get C_Campaign_ID
-	 *	@return Campaign
-	 */
-	public int getC_Campaign_ID()
-	{
-		int ii = super.getC_Campaign_ID ();
-		if (ii == 0)
-			ii = getParent().getC_Campaign_ID();
-		return ii;
-	}	//	getC_Campaign_ID
-	
-	/**
-	 * 	Get User2_ID
-	 *	@return User2
-	 */
-	public int getUser1_ID ()
-	{
-		int ii = super.getUser1_ID ();
-		if (ii == 0)
-			ii = getParent().getUser1_ID();
-		return ii;
-	}	//	getUser1_ID
-
-	/**
-	 * 	Get User2_ID
-	 *	@return User2
-	 */
-	public int getUser2_ID ()
-	{
-		int ii = super.getUser2_ID ();
-		if (ii == 0)
-			ii = getParent().getUser2_ID();
-		return ii;
-	}	//	getUser2_ID
 
 	/**
 	 * 	Get AD_OrgTrx_ID
@@ -790,6 +733,62 @@ public class MOrderLine extends X_C_OrderLine
 		super.setQtyOrdered(QtyOrdered);
 	}	//	setQtyOrdered
 
+	/**
+	 * Set reference for RMA
+	 * @param inOutLineReference
+	 */
+	public void setRef_InOutLine(MInOutLine inOutLineReference) {
+		setRef_InOutLine_ID(inOutLineReference.getM_InOutLine_ID());
+		//	Charge
+		if(inOutLineReference.getC_Charge_ID() != 0) {
+			setC_Charge_ID(inOutLineReference.getC_Charge_ID());
+		}
+		//	Product
+		if(inOutLineReference.getM_Product_ID() != 0) {
+			setM_Product_ID(inOutLineReference.getM_Product_ID());
+		}
+		if(inOutLineReference.getC_UOM_ID() != 0) {
+			setC_UOM_ID(inOutLineReference.getC_UOM_ID());
+		}
+		if(inOutLineReference.getAD_OrgTrx_ID() != 0) {
+			setAD_OrgTrx_ID(inOutLineReference.getAD_OrgTrx_ID());
+		}
+		if(inOutLineReference.getC_Project_ID() != 0) {
+			setC_Project_ID(inOutLineReference.getC_Project_ID());
+		}
+		if(inOutLineReference.getC_Campaign_ID() != 0) {
+			setC_Campaign_ID(inOutLineReference.getC_Campaign_ID());
+		}
+		if(inOutLineReference.getC_Activity_ID() != 0) {
+			setC_Activity_ID(inOutLineReference.getC_Activity_ID());
+		}
+		if(inOutLineReference.getUser1_ID() != 0) {
+			setUser1_ID(inOutLineReference.getUser1_ID());
+		}
+		if(inOutLineReference.getUser2_ID() != 0) {
+			setUser2_ID(inOutLineReference.getUser2_ID());
+		}
+		if(inOutLineReference.getUser3_ID() != 0) {
+			setUser3_ID(inOutLineReference.getUser3_ID());
+		}
+		if(inOutLineReference.getUser4_ID() != 0) {
+			setUser4_ID(inOutLineReference.getUser4_ID());
+		}
+		int invoiceLineReferenceId = inOutLineReference.getInvoiceLineId();
+		//	Set Price from Invoice / Order
+		if (invoiceLineReferenceId != 0) {
+            MInvoiceLine invoiceLine = new MInvoiceLine(getCtx(), invoiceLineReferenceId, get_TrxName());
+            setPriceEntered(invoiceLine.getPriceEntered());
+            setPriceActual(invoiceLine.getPriceActual());
+            setC_Tax_ID(invoiceLine.getC_Tax_ID());
+        } else if (inOutLineReference.getC_OrderLine_ID() != 0) {
+            MOrderLine orderLine = new MOrderLine (getCtx(), inOutLineReference.getC_OrderLine_ID(), get_TrxName());
+            setPriceEntered(orderLine.getPriceEntered());
+            setPriceActual(orderLine.getPriceActual());
+            setC_Tax_ID(orderLine.getC_Tax_ID());
+        }
+	}
+	
 	/**************************************************************************
 	 * 	Before Save
 	 *	@param newRecord
@@ -835,9 +834,12 @@ public class MOrderLine extends X_C_OrderLine
 			//	Check if on Price list
 			if (m_productPrice == null)
 				getProductPricing(m_M_PriceList_ID);
-			if (!m_productPrice.isCalculated())
-			{
-				throw new ProductNotOnPriceListException(m_productPrice, getLine());
+			if (!m_productPrice.isCalculated()) {
+				MDocType documentType = MDocType.get(getCtx(), getParent().getC_DocTypeTarget_ID());
+				if(Util.isEmpty(documentType.getDocSubTypeSO())
+						|| !documentType.getDocSubTypeSO().equals(MDocType.DOCSUBTYPESO_ReturnMaterial)) {
+					throw new ProductNotOnPriceListException(m_productPrice, getLine());
+				}
 			}
 		}
 
@@ -858,7 +860,7 @@ public class MOrderLine extends X_C_OrderLine
 			setQtyOrdered(getQtyOrdered());
 		
 		//	Qty on instance ASI for SO
-		if (m_IsSOTrx 
+		if (getParent().isSOTrx()
 			&& getM_AttributeSetInstance_ID() != 0
 			&& (newRecord || is_ValueChanged("M_Product_ID")
 				|| is_ValueChanged("M_AttributeSetInstance_ID")
@@ -1048,5 +1050,84 @@ public class MOrderLine extends X_C_OrderLine
 		m_parent = null;
 		return no == 1;
 	}	//	updateHeaderTax
-	
+
+	@Override
+	public int getM_Locator_ID() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public BigDecimal getMovementQty()
+	{
+		return this.getQtyEntered();
+	}
+
+	@Override
+	public int getReversalLine_ID() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public boolean isSOTrx() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void setM_Locator_ID(int M_Locator_ID) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public Timestamp getDateAcct() {
+		return getParent().getDateAcct();
+	}
+
+
+	public IDocumentLine getReversalDocumentLine() {
+		return null;
+	}
+
+	@Override
+	public int getM_AttributeSetInstanceTo_ID() {
+		// TODO Auto-generated method stub
+		return -1;
+	}
+
+	@Override
+	public int getM_LocatorTo_ID() {
+		// TODO Auto-generated method stub
+		return -1;
+	}
+
+	@Override
+	public int getC_DocType_ID() {
+		return getParent().getC_DocType_ID();
+	}
+
+	@Override
+	public BigDecimal getPriceActualCurrency() {
+		return getPriceActual();
+	}
+
+	@Override
+	public int getC_Currency_ID ()
+	{
+		return getParent().getC_Currency_ID();
+	}
+
+	@Override
+	public int getC_ConversionType_ID()
+	{
+		return getParent().getC_ConversionType_ID();
+	}
+
+	@Override
+	public boolean isReversalParent() {
+		// TODO Auto-generated method stub
+		return getC_OrderLine_ID() < getReversalLine_ID();
+	}
 }	//	MOrderLine

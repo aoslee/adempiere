@@ -62,7 +62,7 @@ import org.adempiere.webui.component.WListbox;
 import org.adempiere.webui.editor.WPAttributeEditor;
 import org.adempiere.webui.editor.WSearchEditor;
 import org.adempiere.webui.editor.WTableDirEditor;
-import org.adempiere.webui.event.ValueChangeListener;
+import org.adempiere.exceptions.ValueChangeListener;
 import org.compiere.apps.search.Info_Column;
 import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
@@ -294,22 +294,22 @@ public class InfoProductPanel extends InfoPanel implements EventListener, ValueC
 		m_InfoPAttributeButton.addEventListener(Events.ON_CLICK,this);
 
 		fieldValue = new Textbox();
-		fieldValue.setMaxlength(40);
+		//fieldValue.setMaxlength(40);
 		fieldValue.setAttribute("zk_component_ID", "Lookup_Criteria_fieldValue");
 		fieldValue.addEventListener(Events.ON_CHANGE, this);
 		//
 		fieldName = new Textbox();
-		fieldName.setMaxlength(40);
+		//fieldName.setMaxlength(40);
 		fieldName.setAttribute("zk_component_ID", "Lookup_Criteria_fieldName");
 		fieldName.addEventListener(Events.ON_CHANGE, this);
 		//
 		fieldUPC = new Textbox();
-		fieldUPC.setMaxlength(40);
+		//fieldUPC.setMaxlength(40);
 		fieldUPC.setAttribute("zk_component_ID", "Lookup_Criteria_fieldUPC");
 		fieldUPC.addEventListener(Events.ON_CHANGE, this);
 		//
 		fieldSKU = new Textbox();
-		fieldSKU.setMaxlength(40);
+		//fieldSKU.setMaxlength(40);
 		fieldSKU.setAttribute("zk_component_ID", "Lookup_Criteria_fieldSKU");
 		fieldSKU.addEventListener(Events.ON_CHANGE, this);
 		//
@@ -371,7 +371,7 @@ public class InfoProductPanel extends InfoPanel implements EventListener, ValueC
 		fWarehouse_ID.getComponent().setAttribute("fieldName", "fWarehouse_ID");
 
 		
-		fVendor_ID.getComponent().getTextbox().setMaxlength(30);
+		//fVendor_ID.getComponent().getTextbox().setMaxlength(30);
 		fVendor_ID.setIsSOTrx(true, false); // Override the isSOTrx context, Vendors only
 		fVendor_ID.addValueChangeListener(this);
 		fVendor_ID.getComponent().setAttribute("zk_component_ID", "Lookup_Criteria_C_BPartner_ID");
@@ -446,17 +446,20 @@ public class InfoProductPanel extends InfoPanel implements EventListener, ValueC
 		//
         ColumnInfo[] s_layoutWarehouse = new ColumnInfo[]{
         		new ColumnInfo(" ", "M_Warehouse_ID", IDColumn.class),
-        		new ColumnInfo(Msg.translate(Env.getCtx(), "Warehouse"), "Warehouse", String.class),
+        		new ColumnInfo(Msg.translate(Env.getCtx(), "WarehouseName"), "WarehouseName", String.class),
         		new ColumnInfo(Msg.translate(Env.getCtx(), "QtyAvailable"), "sum(QtyAvailable)", Double.class, true, true, null),
         		new ColumnInfo(Msg.translate(Env.getCtx(), "QtyOnHand"), "sum(QtyOnHand)", Double.class),
            		new ColumnInfo(Msg.translate(Env.getCtx(), "QtyReserved"), "sum(QtyReserved)", Double.class),
-        		new ColumnInfo(Msg.translate(Env.getCtx(), "DocumentNote"), "DocumentNote", String.class)};
+           		new ColumnInfo(Msg.translate(Env.getCtx(), "QtyOrdered"), "sum(QtyOrdered)", Double.class)};
+//        		new ColumnInfo(Msg.translate(Env.getCtx(), "DocumentNote"), "DocumentNote", String.class)};
         /**	From Clause							*/
         String s_sqlFrom = " M_PRODUCT_STOCK_V ";
         /** Where Clause						*/
-        String s_sqlWhere = "M_Product_ID = ?";
+        String s_sqlWhere = "(QtyOnHand <> 0 OR QtyAvailable <> 0 OR QtyReserved <> 0 OR QtyOrdered <> 0) AND M_Product_ID = ?";
+//      String s_sqlWhere = "M_Product_ID = ?";
         m_sqlWarehouse = warehouseTbl.prepareTable(s_layoutWarehouse, s_sqlFrom, s_sqlWhere, false, "M_PRODUCT_STOCK_V");
-        m_sqlWarehouse += " Group By M_Warehouse_ID, Warehouse, documentnote ";
+		m_sqlWarehouse += " Group By M_Warehouse_ID, WarehouseName ";
+		m_sqlWarehouse += " Order By sum(QtyOnHand) DESC, WarehouseName ";
 		warehouseTbl.setMultiSelection(false);
         warehouseTbl.autoSize();
         warehouseTbl.setShowTotals(true);
@@ -1178,7 +1181,8 @@ public class InfoProductPanel extends InfoPanel implements EventListener, ValueC
 		s_productFrom += " LEFT OUTER JOIN M_AttributeSet pa ON (p.M_AttributeSet_ID=pa.M_AttributeSet_ID)"
 			+ " LEFT OUTER JOIN M_Product_PO ppo ON (p.M_Product_ID=ppo.M_Product_ID and ppo.IsCurrentVendor='Y' and ppo.IsActive='Y')"
 			+ " LEFT OUTER JOIN M_Product_Category pc ON (p.M_Product_Category_ID=pc.M_Product_Category_ID)"
-			+ " LEFT OUTER JOIN C_BPartner bp ON (ppo.C_BPartner_ID=bp.C_BPartner_ID)";
+			+ " LEFT OUTER JOIN C_BPartner bp ON (ppo.C_BPartner_ID=bp.C_BPartner_ID)"
+			+ " LEFT OUTER JOIN C_UOM u ON (p.C_UOM_ID=u.C_UOM_ID)";
 		
 		return s_productFrom;
 	}
@@ -1483,6 +1487,7 @@ public class InfoProductPanel extends InfoPanel implements EventListener, ValueC
 		list.add(new Info_Column(Msg.translate(Env.getCtx(), "Name"), "p.Name", String.class));
 		list.add(new Info_Column(Msg.translate(Env.getCtx(), "UPC"), "p.UPC", String.class));
 		list.add(new Info_Column(Msg.translate(Env.getCtx(), "SKU"), "p.SKU", String.class));
+		list.add(new Info_Column(Msg.translate(Env.getCtx(), "C_UOM_ID"), "u.name", String.class));
 		if (isValidVObject(fPriceList_ID))
 		{
 			list.add(new Info_Column(Msg.translate(Env.getCtx(), "PriceList"), "bomPriceList(p.M_Product_ID, pr.M_PriceList_Version_ID) AS PriceList",  BigDecimal.class));
@@ -1796,43 +1801,46 @@ public class InfoProductPanel extends InfoPanel implements EventListener, ValueC
 			//  This is done in-line rather than using prepareTable() so we can add a running sum to the data.
 			String sql;
 			if (!showDetail)
-				sql = "(SELECT s.M_Product_ID, w.Name as warehouse, l.value as locator, 0 as ID, now() as Date,"
-					+ " sum(s.QtyOnHand) as AvailQty, null as DeltaQty, null as QtyOrdered, null as QtyReserved,"
-					+ " s.PASI," 
-					+ " null as ASI,"
+				sql = "(SELECT s.M_Product_ID, w.Name as warehouse, l.value as locator, 0 as ID, null as Date,"
+					+ " sum(s.QtyOnHand) as AvailQty, null as DeltaQty, sum(s.QtyOrdered) as QtyOrdered, sum(s.QtyReserved) as QtyReserved,"
+					+ " null as sumPASI," // " s.PASI," 
+					+ " 0 as ASI,"
 					+ " null as BP_Name, null as DocumentNo, 10 as SeqNo";
 			else
 				sql = "(SELECT s.M_Product_ID, w.Name as warehouse, l.value as locator, s.M_AttributeSetInstance_ID as ID, now() as Date,"
-					+ " s.QtyOnHand as AvailQty, null as DeltaQty, null as QtyOrdered, null as QtyReserved,"
-					+ " CASE WHEN PASI  = '' THEN '{' || COALESCE(s.M_AttributeSetInstance_ID,0) || '}' ELSE PASI END as PASI," 
+					+ " s.QtyOnHand as AvailQty, null as DeltaQty, s.QtyOrdered as QtyOrdered, s.QtyReserved as QtyReserved,"
+					+ " CASE WHEN s.PASI  = '' THEN '{' || COALESCE(s.M_AttributeSetInstance_ID,0) || '}' ELSE s.PASI END as sumPASI," 
 					+ " COALESCE(M_AttributeSetInstance_ID,0) as ASI," 
 					+ " null as BP_Name, null as DocumentNo,  10 as SeqNo";
-			sql += " FROM (SELECT M_Product_ID, M_Locator_ID, QtyOnHand, QtyReserved, QtyOrdered, COALESCE(productAttribute(M_AttributeSetInstance_ID)::varchar, '') as PASI, COALESCE(M_AttributeSetInstance_ID,0) as M_AttributeSetInstance_ID FROM M_Storage) s "
+			sql += " FROM (SELECT M_Product_ID, M_Locator_ID, QtyOnHand, QtyReserved, QtyOrdered,"
+				+ 		 " COALESCE(productAttribute(M_AttributeSetInstance_ID)::varchar, '') as PASI,"
+				+		 " COALESCE(M_AttributeSetInstance_ID,0) as M_AttributeSetInstance_ID FROM M_Storage) s "
 				+ " INNER JOIN M_Locator l ON (s.M_Locator_ID=l.M_Locator_ID)"
 				+ " INNER JOIN M_Warehouse w ON (l.M_Warehouse_ID=w.M_Warehouse_ID)"
-				+ " WHERE s.M_Product_ID=?";
+				+ " AND s.M_Product_ID=" + m_M_Product_ID;
 			if (M_Warehouse_ID != 0)
-				sql += " AND l.M_Warehouse_ID=?";
-			if (m_M_AttributeSetInstance_ID > 0)
-				sql += " AND s.M_AttributeSetInstance_ID=?";
+				sql += " AND l.M_Warehouse_ID=" + M_Warehouse_ID;
+			//if (m_M_AttributeSetInstance_ID > 0)
+			//	sql += " AND s.M_AttributeSetInstance_ID=?";
 			if (!showDetail)
 			{
-				sql += " AND (s.QtyOnHand<>0)";
-				sql += " GROUP BY s.M_Product_ID, w.Name, l.value, s.M_Locator_ID, PASI ";
+				//sql += " AND (s.QtyOnHand<>0)";
+				sql += " GROUP BY s.M_Product_ID, w.Name, l.value, s.M_Locator_ID, sumPASI, ASI, BP_Name, DocumentNo, SeqNo ";
 			}
 			else
-			    sql += " AND (s.QtyOnHand<>0 OR s.QtyReserved<>0 OR s.QtyOrdered<>0) ";
+			    //sql += " AND (s.QtyOnHand<>0) ";
+				;
 
 			
-			sql += "UNION ALL ";
+			sql += " UNION ALL ";
 	
 			//	Orders
 			sql += "SELECT ol.M_Product_ID, w.Name as warehouse, null as locator, ol.M_AttributeSetInstance_ID as ID, o.DatePromised as date,"
 				+ " null as AvailQty,"
 				+ " CASE WHEN dt.DocBaseType = 'POO' THEN ol.QtyOrdered ELSE -ol.QtyReserved END as DeltaQty,"
 				+ " CASE WHEN dt.DocBaseType = 'POO' THEN ol.QtyOrdered ELSE null END as QtyOrdered,"
-				+ " CASE WHEN dt.DocBaseType = 'POO' THEN null ELSE ol.QtyReserved END as QtyReserved,"
-				+ " productAttribute(ol.M_AttributeSetInstance_ID) as PASI," 
+				+ " CASE WHEN dt.DocBaseType = 'POO' THEN 0 ELSE 0 END as QtyReserved,"
+				+ " productAttribute(ol.M_AttributeSetInstance_ID) as sumPASI," 
 				+ " ol.M_AttributeSetInstance_ID as ASI,"
 				+ " bp.Name as BP_Name, dt.PrintName || ' ' || o.DocumentNo As DocumentNo, 20 as SeqNo "
 				+ "FROM C_Order o"
@@ -1840,14 +1848,67 @@ public class InfoProductPanel extends InfoPanel implements EventListener, ValueC
 				+ " INNER JOIN C_DocType dt ON (o.C_DocType_ID=dt.C_DocType_ID)"
 				+ " INNER JOIN M_Warehouse w ON (ol.M_Warehouse_ID=w.M_Warehouse_ID)"
 				+ " INNER JOIN C_BPartner bp  ON (o.C_BPartner_ID=bp.C_BPartner_ID) "
-				+ "WHERE ol.QtyReserved<>0"
-				+ " AND ol.M_Product_ID=?";
+				+ "WHERE ol.QtyReserved<>0 AND o.DocStatus in ('IP','CO')"
+				+ " AND ol.M_Product_ID=" + m_M_Product_ID;
 			if (M_Warehouse_ID != 0)
-				sql += " AND ol.M_Warehouse_ID=?";
-			if (m_M_AttributeSetInstance_ID > 0)
-				sql += " AND ol.M_AttributeSetInstance_ID=?";
+				sql += " AND w.M_Warehouse_ID=" + M_Warehouse_ID;
+			//if (m_M_AttributeSetInstance_ID > 0)
+			//	sql += " AND ol.M_AttributeSetInstance_ID=?";
+			//sql += " ORDER BY M_Product_ID, SeqNo, ID, date, locator";
+
+			sql += " UNION ALL ";
+			
+			//	Distribution Orders out bound
+			sql += "SELECT ol.M_Product_ID, wf.Name as warehouse, lf.value as locator, ol.M_AttributeSetInstance_ID as ID, ol.DatePromised as date,"
+				+ " null as AvailQty,"
+				+ " -ol.QtyOrdered+ol.QtyInTransit+ol.QtyDelivered as DeltaQty,"
+				+ " null as QtyOrdered,"
+				+ " null  as QtyReserved,"
+				+ " productAttribute(ol.M_AttributeSetInstance_ID) as sumPASI," 
+				+ " ol.M_AttributeSetInstance_ID as ASI,"
+				+ " bp.Name as BP_Name, dt.PrintName || ' ' || o.DocumentNo As DocumentNo, 20 as SeqNo "
+				+ "FROM DD_Order o"
+				+ " INNER JOIN DD_OrderLine ol ON (o.DD_Order_ID=ol.DD_Order_ID)"
+				+ " INNER JOIN C_DocType dt ON (o.C_DocType_ID=dt.C_DocType_ID)"
+				+ " INNER JOIN M_Locator l ON (l.M_Locator_ID = ol.M_LocatorTo_ID)"
+				+ " INNER JOIN M_Locator lf on (lf.M_Locator_ID = ol.M_Locator_ID)"
+				+ " INNER JOIN M_Warehouse w ON (l.M_Warehouse_ID=w.M_Warehouse_ID)"
+				+ " INNER JOIN M_Warehouse wf ON (lf.M_Warehouse_ID=wf.M_Warehouse_ID)"
+				+ " INNER JOIN C_BPartner bp  ON (o.C_BPartner_ID = bp.C_BPartner_ID) "
+				+ "WHERE ol.QtyReserved<>0 AND o.DocStatus in ('IP','CO') AND o.IsDelivered = 'N'"
+				+ " AND ol.M_Product_ID=" + m_M_Product_ID;
+			if (M_Warehouse_ID != 0)
+				sql += " AND wf.M_Warehouse_ID=" + M_Warehouse_ID;
+			//if (m_M_AttributeSetInstance_ID > 0)
+			//	sql += " AND ol.M_AttributeSetInstance_ID=?";
+
+			sql += " UNION ALL ";
+			
+			//	Distribution Orders in bound
+			sql += "SELECT ol.M_Product_ID, w.Name as warehouse, l.value as locator, ol.M_AttributeSetInstance_ID as ID, ol.DatePromised as date,"
+				+ " null as AvailQty,"
+				+ " ol.QtyOrdered-ol.QtyDelivered as DeltaQty,"
+				+ " null as QtyOrdered,"
+				+ " null  as QtyReserved,"
+				+ " productAttribute(ol.M_AttributeSetInstance_ID) as sumPASI," 
+				+ " ol.M_AttributeSetInstance_ID as ASI,"
+				+ " bp.Name as BP_Name, dt.PrintName || ' ' || o.DocumentNo As DocumentNo, 20 as SeqNo "
+				+ "FROM DD_Order o"
+				+ " INNER JOIN DD_OrderLine ol ON (o.DD_Order_ID=ol.DD_Order_ID)"
+				+ " INNER JOIN C_DocType dt ON (o.C_DocType_ID=dt.C_DocType_ID)"
+				+ " INNER JOIN M_Locator l ON (l.M_Locator_ID = ol.M_LocatorTo_ID)"
+				+ " INNER JOIN M_Locator lf on (lf.M_Locator_ID = ol.M_Locator_ID)"
+				+ " INNER JOIN M_Warehouse w ON (l.M_Warehouse_ID=w.M_Warehouse_ID)"
+				+ " INNER JOIN M_Warehouse wf ON (lf.M_Warehouse_ID=wf.M_Warehouse_ID)"
+				+ " INNER JOIN C_BPartner bp  ON (wf.AD_Org_ID=bp.AD_OrgBP_ID) "
+				+ "WHERE ol.QtyOrdered - ol.Qtydelivered > 0 AND o.DocStatus in ('IP','CO') AND o.IsDelivered='N'" 
+				+ " AND ol.M_Product_ID=" + m_M_Product_ID;
+			if (M_Warehouse_ID != 0)
+				sql += " AND w.M_Warehouse_ID=" + M_Warehouse_ID;
+			//if (m_M_AttributeSetInstance_ID > 0)
+			//	sql += " AND ol.M_AttributeSetInstance_ID=?";
 			sql += " ORDER BY M_Product_ID, SeqNo, ID, date, locator)";
-	
+
 			double qty = 0;
 			PreparedStatement pstmt = null;
 			ResultSet rs = null;
@@ -1855,17 +1916,6 @@ public class InfoProductPanel extends InfoPanel implements EventListener, ValueC
 			{
 				int index = 1;
 				pstmt = DB.prepareStatement(sql, null);
-				pstmt.setInt(index++, m_M_Product_ID);
-				//  Two queries in union - parameters repeat
-				if (M_Warehouse_ID != 0)
-					pstmt.setInt(index++, M_Warehouse_ID);
-				if (m_M_AttributeSetInstance_ID > 0)
-					pstmt.setInt(index++, m_M_AttributeSetInstance_ID);
-				pstmt.setInt(index++, m_M_Product_ID);
-				if (M_Warehouse_ID != 0)
-					pstmt.setInt(index++, M_Warehouse_ID);
-				if (m_M_AttributeSetInstance_ID > 0)
-					pstmt.setInt(index++, m_M_AttributeSetInstance_ID);
 				rs = pstmt.executeQuery();
 				while (rs.next())
 				{
@@ -1882,7 +1932,7 @@ public class InfoProductPanel extends InfoPanel implements EventListener, ValueC
 					line.add(rs.getTimestamp(5));					//  Date
 					double deltaQty = rs.getDouble(7);
 					qty += +rs.getDouble(6) + deltaQty;
-					line.add(new Double(qty));  					//  Qty Available
+					line.add(new Double(qty) - rs.getDouble(9));  					//  Qty Available (running sum)
 					line.add(new Double(rs.getDouble(6)));			//  Qty on hand (this line)
 					line.add(new Double(rs.getDouble(7)));			//  Delta Qty
 					line.add(rs.getString(12));						//  BPartner

@@ -25,6 +25,7 @@
 
 package org.adempiere.webui.window;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -44,6 +45,7 @@ import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Combobox;
+import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.ListCell;
@@ -58,13 +60,15 @@ import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.Textbox;
 import org.adempiere.webui.component.ToolBar;
 import org.adempiere.webui.component.ToolBarButton;
+import org.adempiere.webui.component.WAppsAction;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.editor.WEditor;
 import org.adempiere.webui.editor.WNumberEditor;
 import org.adempiere.webui.editor.WStringEditor;
+import org.adempiere.webui.editor.WTableDirEditor;
 import org.adempiere.webui.editor.WebEditorFactory;
-import org.adempiere.webui.event.ValueChangeEvent;
-import org.adempiere.webui.event.ValueChangeListener;
+import org.adempiere.exceptions.ValueChangeEvent;
+import org.adempiere.exceptions.ValueChangeListener;
 import org.adempiere.webui.part.MultiTabPart;
 import org.compiere.model.GridField;
 import org.compiere.model.GridFieldVO;
@@ -83,6 +87,7 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.SecureEngine;
+import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
 import org.zkoss.zk.au.out.AuFocus;
 import org.zkoss.zk.ui.Component;
@@ -112,6 +117,14 @@ import org.zkoss.zul.Hbox;
  *  @author  WalkingTree (www.walkingtree.in)
  *  @date    October 4th,2013
  *      <li> Added Range based lookup for selection columns.
+ *  
+ *  @author Yamel Senih, ysenih@erpcya.com, ERPCyA http://www.erpcya.com
+ *		<a href="https://github.com/adempiere/adempiere/issues/589">
+ * 		@see FR [ 589 ] The ZK search window don't have standard position buttons</a>
+ *
+ *  @author Raul Capecce, raul.capecce@openupsolutions.com, Openup Solutions http://openupsolutions.com/
+ *      <a href="https://github.com/adempiere/adempiere/issues/2372">
+ *      @see FR [ 2372 ] The field "value_TO" is not seted in storage when the operator isn't BETWEEN
  */
 public class FindWindow extends Window implements EventListener,ValueChangeListener
 {
@@ -207,6 +220,9 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
 	/** Search messages using translation */
 	private String				m_sLast;
 	private String				m_sNew;
+	private String				m_sTipText;  // Text to display in ComboBoc	
+	private String				m_sToolTipText;  // Tool tip text to display 
+
 	
 	private static final String FIELD_SEPARATOR = "<^>";
 	private static final String SEGMENT_SEPARATOR = "<~>";
@@ -256,17 +272,19 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
         this.setHeight("350px");
         this.setTitle(Msg.getMsg(Env.getCtx(), "Find").replaceAll("&", "") + ": " + title);
         this.setAttribute(Window.MODE_KEY, Window.MODE_MODAL);
-        this.setClosable(false);
+        this.setClosable(true);
         this.setSizable(true);
+        this.setMaximizable(true);
         
         this.setVisible(true);
         AEnv.showWindow(this);
     }
     /**
      * initialise lookup record tab
+     * @throws IOException 
      *
     **/
-    private void initSimple()
+    private void initSimple() throws IOException
     {
         lblDocumentNo = new Label();
         lblDocumentNo.setValue(Msg.translate(Env.getCtx(),"DocumentNo").replaceAll("&", ""));
@@ -294,27 +312,28 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
         fieldValue = new Textbox();
         fieldValue.setMaxlength(40);
 
-        Button btnNew = new Button();
+        //	Get button from Action
+        WAppsAction action = new WAppsAction(ConfirmPanel.A_NEW, null, ConfirmPanel.A_NEW);
+        Button btnNew = action.getButton();
         btnNew.setName("btnNew");
-        btnNew.setImage("/images/New24.png");
         btnNew.addEventListener(Events.ON_CLICK,this);
-        LayoutUtils.addSclass("action-button", btnNew);
 
-        Button btnOk = new Button();
+        //	Get button from Action
+        action = new WAppsAction(ConfirmPanel.A_OK, null, ConfirmPanel.A_OK);
+        Button btnOk = action.getButton();
         btnOk.setName("btnOkSimple");
-        btnOk.setImage("/images/Ok24.png");
         btnOk.addEventListener(Events.ON_CLICK,this);
-        LayoutUtils.addSclass("action-button", btnOk);
 
-        Button btnCancel = new Button();
+        //	Get from action
+        action = new WAppsAction(ConfirmPanel.A_CANCEL, null, ConfirmPanel.A_CANCEL);
+        Button btnCancel = action.getButton();
         btnCancel.setName("btnCancel");
-        btnCancel.setImage("/images/Cancel24.png");
         btnCancel.addEventListener(Events.ON_CLICK,this);
-        LayoutUtils.addSclass("action-button", btnCancel);
 
         Panel pnlButtonRight = new Panel();
-        pnlButtonRight.appendChild(btnOk);
+        //	Change to Standard button order
         pnlButtonRight.appendChild(btnCancel);
+        pnlButtonRight.appendChild(btnOk);
         pnlButtonRight.setAlign("right");
         pnlButtonRight.setWidth("100%");
 
@@ -375,47 +394,58 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
         winLookupRecord.addEventListener(Events.ON_OK, this);
 
     }   //  initSimple
+    
+    @Override
+    public void onClose() {
+    	m_isCancel = true;
+    	super.onClose();
+    }
 
     /**
      * initialise Advanced Tab
+     * @throws IOException 
      *
     **/
-    private void initAdvanced()
+    private void initAdvanced() throws IOException
     {
         ToolBarButton btnNew = new ToolBarButton();
-        btnNew.setImage("/images/New24.png");
+        btnNew.setImage("/images/dark/New24.png");
         btnNew.setAttribute("name", "btnNewAdv");
         btnNew.addEventListener(Events.ON_CLICK, this);
 
         ToolBarButton btnDelete = new ToolBarButton();
         btnDelete.setAttribute("name","btnDeleteAdv");
-        btnDelete.setImage("/images/Delete24.png");
+        btnDelete.setImage("/images/dark/Delete24.png");
         btnDelete.addEventListener(Events.ON_CLICK, this);
 
         ToolBarButton btnSave = new ToolBarButton();
         btnSave.setAttribute("name","btnSaveAdv");
-        btnSave.setImage("/images/Save24.png");
+        btnSave.setImage("/images/dark/Save24.png");
         btnSave.addEventListener(Events.ON_CLICK, this);
 
         fQueryName = new Combobox();
-        fQueryName.setTooltiptext(Msg.getMsg(Env.getCtx(),"QueryName"));
+        fQueryName.setTooltiptext(m_sToolTipText);
 		fQueryName.setReadonly(false);
+		fQueryName.addEventListener(Events.ON_FOCUS, this);
+		fQueryName.addEventListener(Events.ON_BLUR, this);
+        fQueryName.addEventListener(Events.ON_SELECT, this);
 
-        Button btnOk = new Button();
+        //	Get from Action
+        WAppsAction action = new WAppsAction(ConfirmPanel.A_OK, null, ConfirmPanel.A_OK);
+        Button btnOk = action.getButton();
         btnOk.setName("btnOkAdv");
-        btnOk.setImage("/images/Ok24.png");
         btnOk.addEventListener(Events.ON_CLICK, this);
-        LayoutUtils.addSclass("action-button", btnOk);
 
-        Button btnCancel = new Button();
+        //	
+        action = new WAppsAction(ConfirmPanel.A_CANCEL, null, ConfirmPanel.A_CANCEL);
+        Button btnCancel = action.getButton();
         btnCancel.setName("btnCancel");
-        btnCancel.setImage("/images/Cancel24.png");
         btnCancel.addEventListener(Events.ON_CLICK, this);
-        LayoutUtils.addSclass("action-button", btnCancel);
 
         Panel pnlButtonRight = new Panel();
-        pnlButtonRight.appendChild(btnOk);
+        //	Change to Standard button order
         pnlButtonRight.appendChild(btnCancel);
+        pnlButtonRight.appendChild(btnOk);
         pnlButtonRight.setAlign("right");
 
         ToolBar toolBar = new ToolBar();
@@ -424,9 +454,7 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
         toolBar.appendChild(fQueryName);
         toolBar.appendChild(btnSave);
         toolBar.setWidth("100%");
-        fQueryName.setStyle("margin-left: 3px; margin-right: 3px; position: relative; top: 5px;");
-        fQueryName.addEventListener(Events.ON_SELECT, this);
-        
+        fQueryName.setStyle("margin-left: 3px; margin-right: 3px; position: relative; top: 5px;");        
 
         btnSave.setDisabled(m_AD_Tab_ID <= 0);
 
@@ -517,9 +545,15 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
         tabPanel.setStyle("height: 100%; width: 100%");
         tabPanel.appendChild(winAdvanced);
         winMain.addTab(tabPanel, Msg.getMsg(Env.getCtx(), "Advanced").replaceAll("&", ""), false, false);
-        initSimple();
-        initAdvanced();
-
+        m_sTipText = "<".concat(Msg.getMsg(Env.getCtx(),"SelectOrEnterQueryName")).concat(">");
+		m_sToolTipText = Msg.getMsg(Env.getCtx(),"SelectOrEnterQueryNameToolTip");
+		
+		try {
+			initSimple();
+			initAdvanced();
+		} catch (Exception e) {
+			log.warning("Init failed " + e.getLocalizedMessage());
+		}
     } // initPanel
 
     /**
@@ -936,11 +970,9 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
         //  Editor
         WEditor editor = null;
 		Label label 	= null;
-		Row panel 		= new Row ();
 
-		contentSimpleRows.appendChild(panel);
 
-		if ( mField.isRange() ) {
+		if ( mField.isRangeLookup() ) {
 			Hbox box = new Hbox();
         editor = WebEditorFactory.getEditor(mField, false);
 		label = editor.getLabel();
@@ -975,6 +1007,9 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
 
         panel.appendChild(LayoutUtils.makeRightAlign(label));
         panel.appendChild(box);
+
+        contentSimpleRows.appendChild(panel);
+
         fieldLabel.addEventListener(Events.ON_OK,this);
         fieldLabel1.addEventListener(Events.ON_OK,this);
         }
@@ -986,12 +1021,21 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
             editor.dynamicDisplay();
             Component fieldLabel = editor.getComponent();
 
-			//
-			if (displayLength > 0)      //  set it back
-				mField.setDisplayLength(displayLength);
-			//
+            if (displayLength > 0)      //  set it back
+                mField.setDisplayLength(displayLength);
+            //
+            if(isTwoColumns)
+            {
+                if(!isPair)
+                    panel = new Row();
+            }
+            else
+                panel = new Row();
+
             panel.appendChild(LayoutUtils.makeRightAlign(label));
             panel.appendChild(fieldLabel);
+            contentSimpleRows.appendChild(panel);
+
 			fieldLabel.addEventListener(Events.ON_OK,this);
 
 			m_sEditors2.add (null);
@@ -1032,12 +1076,21 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
     		else if (event.getTarget() == fQueryName)
     		{
     			int index = fQueryName.getSelectedIndex();
-    			if(index < 0) return;
-    			if(index == 0) { // no query - wipe and start over.
+    			if(index < 0) 
+    			{
+    				if (fQueryName.getSelectedItem() == null || fQueryName.getSelectedItem().equals(m_sTipText))
+    				{
+    					return;
+    				}
+    			}
+    			else if(index == 0) 
+    			{ // no query - wipe and start over.
     		        List<?> rowList = advancedPanel.getChildren();
     		        for (int rowIndex = rowList.size() - 1; rowIndex >= 1; rowIndex--)
     		        	rowList.remove(rowIndex);
-    				createFields();  
+    				createFields();
+                    fQueryName.setSelectedIndex(-1);
+                    fQueryName.setText(m_sTipText);
     			}
     			else parseUserQuery(userQueries[index-1]);
     		}
@@ -1057,13 +1110,16 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
                 else if ("btnDeleteAdv".equals(button.getAttribute("name").toString()))
                 {
                     int index = advancedPanel.getSelectedIndex();
-                    advancedPanel.getSelectedItem().detach();
-                    advancedPanel.setSelectedIndex(--index);
+                    if (index >= 0)
+                    {
+                        cmd_delete();
+                    }
                 }
 
                 else if ("btnSaveAdv".equals(button.getAttribute("name").toString()))
                 {
-                	cmd_save(true);
+                	// Save the query but don't overwrite the Last query
+                	cmd_save(false);
                 }
             }
             //  Confirm panel actions
@@ -1124,12 +1180,65 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
 				{
 					cmd_ok_Simple();
 					dispose();
-        }
+				}
 			}
 		}
-
+        else if (Events.ON_FOCUS.equals(event.getName()))
+        {
+        	if (event.getTarget() == fQueryName)
+    		{
+        		// fQueryName received the focus - delete the tip text so the user can type without 
+        		// having to delete the tip.
+    			int index = fQueryName.getSelectedIndex();
+    			if(index < 0) 
+    			{
+    				if (fQueryName.getSelectedItem() == null || fQueryName.getSelectedItem().equals(m_sTipText))
+    				{
+                        fQueryName.setSelectedIndex(-1);
+                        fQueryName.setText("");
+    				}
+    			}
+    		}
+        }
+        else if (Events.ON_BLUR.equals(event.getName()))
+        {
+        	if (event.getTarget() == fQueryName)
+    		{
+        		// fQueryName lost the focus. If the field is blank, replace the tip text.
+				if (fQueryName.getSelectedItem() != null && fQueryName.getSelectedItem().equals(""))
+    			{
+                    fQueryName.setText(m_sTipText);
+				}
+    		}
+        }
     }   //  onEvent
 
+	/**
+	 * 
+	 */
+	private void cmd_delete() {
+		int index = advancedPanel.getSelectedIndex();
+		if (index < 0) {
+			int index0 = fQueryName.getSelectedIndex();
+			if(index0 < 0) return;
+			MUserQuery uq = userQueries[index0];
+			uq.delete(true);
+			userQueries = MUserQuery.get(Env.getCtx(), m_AD_Tab_ID);
+			for (int i = 0; i < userQueries.length; i++)
+				fQueryName.appendItem(userQueries[i].getName());
+			fQueryName.setValue("");
+		} else {
+			advancedPanel.getSelectedItem().detach();
+			advancedPanel.setSelectedIndex(--index);
+	    	//refreshUserQueries();
+		}
+	}
+
+    /** 
+     * Parse a user query from the database and fill the advanced query table.  The query is saved 
+     * in the database as a coded string.  See {@link #codeUserQuery()}.
+     * @param userQuery	The user query to parse.
+     */
     private void parseUserQuery(MUserQuery userQuery)
     {
 		String code = userQuery.getCode();
@@ -1232,9 +1341,99 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
 
 	}	//	parseValue
 
+	/**
+	 * Save the advanced query in the database using the query name. If the query name is set,
+	 * the query will be updated or a new query saved.
+	 * @param saveQuery	Save the query as the Last Query.  Set to true when running the query.
+	 * Set to false to only save using the query name.
+	 */
     private void cmd_save(boolean saveQuery)
 	{
 		//
+    	StringBuffer code = codeUserQuery();
+		//  Save the query
+		//  Every query is saved automatically as ** Last Query ** when run.
+		//  Queries run without a name will not be saved.
+
+		String name = fQueryName.getValue();
+		if (name == null)
+		{
+			return;
+		}
+		
+		if (name.equals(m_sNew) || name.equals(m_sLast) || name.equals(m_sTipText) || Util.isEmpty(name, true )) 
+		{
+			// No name to save to.  Just run the query.
+		}
+		else  // Save the query in the database.
+		{
+			MUserQuery uq = MUserQuery.get(Env.getCtx(), m_AD_Tab_ID, name);
+			if (code.length() > 0) { // New or updated
+				if (uq == null) // Create a new record
+				{
+					uq = new MUserQuery (Env.getCtx(), 0, null);
+					uq.setName (name);
+					uq.setAD_Table_ID(m_AD_Table_ID);
+					uq.setAD_Tab_ID(m_AD_Tab_ID); //red1 UserQuery [ 1798539 ] taking in new field from Compiere
+					uq.setAD_User_ID(Env.getAD_User_ID(Env.getCtx())); //red1 - [ 1798539 ] missing in Compiere delayed source :-)
+				}
+				uq.setCode (code.toString());  // Update the query code
+				
+			} 
+			else	if (code.length() <= 0) // Delete the query
+			{
+				if (uq.delete(true))
+				{
+					FDialog.info (m_targetWindowNo, this, "Deleted", name);
+					refreshUserQueries();
+				}
+				else
+					FDialog.warn (m_targetWindowNo, this, "DeleteError", name);
+				return;
+			}
+			//
+			if (uq.save())
+			{
+				//FDialog.info (m_targetWindowNo, this, "Saved", name);
+				refreshUserQueries();
+			}
+			else
+				FDialog.warn (m_targetWindowNo, this, "SaveError", name);
+		}
+		//
+		//  Save the query as the Last Query.
+		if (saveQuery)
+		{
+			MUserQuery last = MUserQuery.get(Env.getCtx(), m_AD_Tab_ID, m_sLast);
+			if (code.length() > 0) { // New or update				
+				if (last == null) // Create a new record
+				{
+					last = new MUserQuery (Env.getCtx(), 0, null);
+					last.setName (m_sLast);
+					last.setAD_Table_ID (m_AD_Table_ID);
+					last.setAD_Tab_ID(m_AD_Tab_ID); 
+					last.setAD_User_ID(Env.getAD_User_ID(Env.getCtx())); 
+				}
+				last.setCode (code.toString());  // Update the query code
+			} else	if (code.length() <= 0){ // Delete the query
+				if (last != null && !last.delete(true))
+					FDialog.warn (m_targetWindowNo, this, "DeleteError", name);
+				return;
+			}
+
+			if (!last.save())
+				FDialog.warn (m_targetWindowNo, this, "SaveError", name);
+		}
+	}	//	cmd_save
+
+    /**
+     * Code the query parameters entered in the table into a string that can be saved in the database.
+     * This is the counterpart to {@link #parseUserQuery()}. Also updates the {@link #m_query} variable with 
+     * the current query information.
+     * @return a StringBuffer containing the coded query information.
+     */
+	private StringBuffer codeUserQuery() {
+
 		m_query = new MQuery(m_tableName);
 		StringBuffer code = new StringBuffer();
 
@@ -1253,7 +1452,7 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
             String infoName = column.toString();
             //
             GridField field = getTargetMField(ColumnName);
-            if(field == null) 
+            if(field == null)
             	continue; // Elaine 2008/07/29
             boolean isProductCategoryField = isProductCategoryField(field.getAD_Column_ID());
             String ColumnSQL = field.getColumnSQL(false);
@@ -1273,7 +1472,7 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
 			boolean and = true;
 			if ( rowIndex > 1 ) {
 				and = !"OR".equals(andOr);
-			}            
+			}
             //  Op
             Listbox op = (Listbox)row.getFellow("listOperator"+row.getId());
             if (op == null)
@@ -1285,15 +1484,15 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
             Object value = cellQueryFrom.getAttribute("value");
             ListCell cellQueryTo = (ListCell)row.getFellow("cellQueryTo"+row.getId());
             Object value2 = cellQueryTo.getAttribute("value");
-            if (value == null){  // Capture the case "is null" ?
-				if ( MQuery.OPERATORS[MQuery.EQUAL_INDEX].equals(op) 
-						||  MQuery.OPERATORS[MQuery.NOT_EQUAL_INDEX].equals(op) )
-				{
-					m_query.addRestriction(ColumnSQL, Operator, null,
-							infoName, null, and, openBrackets);
-	            } else {
-	            	continue;
-	            }
+            if (value == null) {  // Capture the case "is null" ?
+                    if (MQuery.OPERATORS[MQuery.EQUAL_INDEX].equals(op)
+                            || MQuery.OPERATORS[MQuery.NOT_EQUAL_INDEX].equals(op)) {
+                        value2 = null; // The value2 needs to be null too
+                        m_query.addRestriction(ColumnSQL, Operator, null,
+                                infoName, null, and, openBrackets);
+                    } else {
+                        continue;
+                    }
             } else {  // Value has a value - check for range too.
 	            Object parsedValue = parseValue(field, value);
 	            if (parsedValue == null)
@@ -1325,15 +1524,18 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
 	                			infoName, infoDisplay, infoDisplay_to, and, openBrackets);
 	            }
 	            else if (isProductCategoryField && MQuery.OPERATORS[MQuery.EQUAL_INDEX].equals(op)) {
+	                value2 = null;
 	                if (!(parsedValue instanceof Integer)) {
 	                    continue;
 	                }
-	                m_query.addRestriction(getSubCategoryWhereClause(((Integer) parsedValue).intValue()), 
+	                m_query.addRestriction(getSubCategoryWhereClause(((Integer) parsedValue).intValue()),
 	                		and, openBrackets);
 	            }
-	            else
-	                m_query.addRestriction(ColumnSQL, Operator, parsedValue,
-	                    infoName, infoDisplay, and, openBrackets);
+	            else {
+                        value2 = null;
+                        m_query.addRestriction(ColumnSQL, Operator, parsedValue,
+                                infoName, infoDisplay, and, openBrackets);
+                    }
 	        }
         	if (code.length() > 0)
 				code.append(SEGMENT_SEPARATOR);
@@ -1343,78 +1545,16 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
 				.append(FIELD_SEPARATOR)
 				.append(value.toString())
 				.append(FIELD_SEPARATOR)
-				.append(value2 != null ? value2.toString() : "")
-				.append(FIELD_SEPARATOR)
+			    .append(value2 != null ? value2.toString() : "")
+                .append(FIELD_SEPARATOR)
 				.append(andOr)
 				.append(FIELD_SEPARATOR)
 				.append(lBrackets != null ? lBrackets : "")
 				.append(FIELD_SEPARATOR)
 				.append(rBrackets != null ? rBrackets : "");
 		}
-		
-		String selected = fQueryName.getValue();
-		if (selected != null) {
-			String name = selected;
-			if ((fQueryName.getSelectedIndex() == 0 || name.equals(m_sLast)) && saveQuery){ // New query - needs a name
-
-				FDialog.warn (m_targetWindowNo, this, "NeedsName", name);
-				return;
-			}
-			if (saveQuery){
-				MUserQuery uq = MUserQuery.get(Env.getCtx(), m_AD_Tab_ID, name);
-				if (code.length() > 0) { // New or updated
-					if (uq == null) // Create a new record
-					{
-						uq = new MUserQuery (Env.getCtx(), 0, null);
-						uq.setName (name);
-						uq.setAD_Table_ID(m_AD_Table_ID);
-						uq.setAD_Tab_ID(m_AD_Tab_ID); //red1 UserQuery [ 1798539 ] taking in new field from Compiere
-						uq.setAD_User_ID(Env.getAD_User_ID(Env.getCtx())); //red1 - [ 1798539 ] missing in Compiere delayed source :-)
-					}
-					uq.setCode (code.toString());  // Update the query code
-					
-				} else	if (code.length() <= 0){ // Delete the query
-					if (uq.delete(true))
-					{
-						FDialog.info (m_targetWindowNo, this, "Deleted", name);
-						refreshUserQueries();
-					}
-					else
-						FDialog.warn (m_targetWindowNo, this, "DeleteError", name);
-					return;
-				}
-				//
-				if (uq.save())
-				{
-					FDialog.info (m_targetWindowNo, this, "Saved", name);
-					refreshUserQueries();
-				}
-				else
-					FDialog.warn (m_targetWindowNo, this, "SaveError", name);
-			}
-			//
-			MUserQuery last = MUserQuery.get(Env.getCtx(), m_AD_Tab_ID, m_sLast);
-			if (code.length() > 0) { // New or update				
-				if (last == null) // Create a new record
-				{
-					last = new MUserQuery (Env.getCtx(), 0, null);
-					last.setName (m_sLast);
-					last.setAD_Table_ID (m_AD_Table_ID);
-					last.setAD_Tab_ID(m_AD_Tab_ID); 
-					last.setAD_User_ID(Env.getAD_User_ID(Env.getCtx())); 
-				}
-				last.setCode (code.toString());  // Update the query code
-			} else	if (code.length() <= 0){ // Delete the query
-				if (!last.delete(true))
-					FDialog.warn (m_targetWindowNo, this, "DeleteError", name);
-				return;
-			}
-
-			if (!last.save())
-				FDialog.warn (m_targetWindowNo, this, "SaveError", name);
-		}
-	}	//	cmd_save
-
+		return code;
+	}
 	private void refreshUserQueries()
 	{
 		String value = m_sLast;
@@ -1436,8 +1576,12 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
 			}
 		}
 
-		if(!selected) fQueryName.setSelectedIndex(0);
-		
+		if(!selected) 
+		{
+			fQueryName.setSelectedIndex(-1);
+			fQueryName.setText(m_sTipText);
+			createFields();
+		}		
 	}
 
     /**
@@ -1560,6 +1704,11 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
         editor.setReadWrite(enabled);
         editor.setVisible(enabled);
         editor.dynamicDisplay();
+        // Table Direct Editors don't update the lookups if not read enabled
+        // So we have to do this after setting the ReadWrite
+        if (enabled && editor instanceof WTableDirEditor) {
+        	((WTableDirEditor) editor).actionRefresh();
+        }
         //
         return editor.getComponent();
 
@@ -1666,11 +1815,11 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
 				else
 					modifiedvalue = value;
                 //
-				if ( modifiedvalue.toString().indexOf('%') != -1 && !field.isRange() )
+				if ( modifiedvalue.toString().indexOf('%') != -1 && !field.isRangeLookup() )
 					m_query.addRestriction(ColumnSQL, MQuery.LIKE, modifiedvalue, ColumnName, wed.getDisplay());
                 else if (isProductCategoryField && value instanceof Integer)
                     m_query.addRestriction(getSubCategoryWhereClause(((Integer) value).intValue()));
-				else if ( ! field.isRange()  )																//20121115
+				else if ( ! field.isRangeLookup()  )																//20121115
                     m_query.addRestriction(ColumnSQL, MQuery.EQUAL, value, ColumnName, wed.getDisplay());
                 /*
                 if (value.toString().indexOf('%') != -1)
@@ -1681,7 +1830,7 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
                 // end globalqss patch
             }
 
-			if (field.isRange() ){
+			if (field.isRangeLookup() ){
 
 				WEditor toRangeEditor = (WEditor)m_sEditors2.get(i);
 				Object value2 = null;
@@ -1762,7 +1911,7 @@ public class FindWindow extends Window implements EventListener,ValueChangeListe
     {
         m_isCancel = false; // teo_sarca [ 1708717 ]
         //  save pending
-        cmd_save(false);
+        cmd_save(true); // Always save and update the last query run
         if (getNoOfRecords(m_query, true) != 0)
           dispose();
     }   //  cmd_ok_Advanced

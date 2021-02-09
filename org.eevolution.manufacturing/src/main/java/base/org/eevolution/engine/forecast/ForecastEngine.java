@@ -90,11 +90,7 @@ public final class ForecastEngine {
 		// Ini.setProperty(Ini.P_PRINTER,"MyPrinter");
 		Login login = new Login(Env.getCtx());
 		login.batchLogin();
-		// MWMInOutBoundLine line = new MWMInOutBoundLine(Env.getCtx(), 1000006,
-		// null);
 		ForecastEngine engine = ForecastEngine.get();
-		// MWMInOutBound order = line.getParent();
-		// engine.getMLocator(line, 0 , 0 );
 	}
 
 	/** Logger */
@@ -205,19 +201,19 @@ public final class ForecastEngine {
 
 	public DataSet getForecast(String implementationClass,
 			Integer M_Product_ID, DataSet series, double factorAlpha,
-			double factorGamma, double factorBeta, double factorMultiplier, double factorSacle, double factor) {
+			double factorGamma, double factorBeta, double factorMultiplier, double factorScale, double factor) {
 		ForecastRule implementation = getForecastRuleFactory(implementationClass);
 		if (implementation == null)
 			throw new AdempiereException("@PP_ForecastRule_ID@ "
 					+ implementationClass + " @NotFound@ ");
 
 		implementation.setDataSet(series, factorAlpha, factorGamma,factorBeta,
-				factorMultiplier, factorSacle, factor);
+				factorMultiplier, factorScale, factor);
 		implementation.setKey(M_Product_ID.toString());
 
 		return applyfactorScale(
 				applyfactorMultiplier(implementation.getForecast(),
-						factorMultiplier), factorSacle);
+						factorMultiplier), factorScale);
 	}
 
 	private DataSet applyfactorMultiplier(DataSet dataSet,

@@ -33,6 +33,7 @@ import org.adempiere.webui.dashboard.DashboardPanel;
 import org.adempiere.webui.dashboard.DashboardRunnable;
 import org.adempiere.webui.event.MenuListener;
 import org.adempiere.webui.panel.ADForm;
+import org.adempiere.webui.panel.CustomForm;
 import org.adempiere.webui.panel.HeaderPanel;
 import org.adempiere.webui.panel.SidePanel;
 import org.adempiere.webui.session.SessionManager;
@@ -133,8 +134,9 @@ public class NavBarDesktop extends TabbedDesktop implements MenuListener, Serial
         dashboardRunnable = new DashboardRunnable(layout.getDesktop(), this);
 
         North n = new North();
-        layout.appendChild(n);
+        n.setSplittable(true);
         n.setCollapsible(false);
+        layout.appendChild(n);
         pnlHead.setParent(n);
 
         leftRegion = new West();
@@ -495,6 +497,12 @@ public class NavBarDesktop extends TabbedDesktop implements MenuListener, Serial
 	public ADForm openForm(int formId) {
 		autoHideMenu();
 		return super.openForm(formId);
+	}
+
+	@Override
+	public CustomForm openBrowse(int AD_Browse_ID, Boolean isSOTrx) {
+		autoHideMenu();
+		return super.openBrowse(AD_Browse_ID , isSOTrx);
 	}
 
 	@Override

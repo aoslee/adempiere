@@ -1,8 +1,9 @@
 /******************************************************************************
- * Product: Adempiere ERP & CRM Smart Business Solution                       *
- * Copyright (C) 1999-2007 ComPiere, Inc. All Rights Reserved.                *
+ * Product: ADempiere ERP & CRM Smart Business Solution                       *
+ * Copyright (C) 2006-2017 ADempiere Foundation, All Rights Reserved.         *
  * This program is free software, you can redistribute it and/or modify it    *
  * under the terms version 2 of the GNU General Public License as published   *
+ * or (at your option) any later version.										*
  * by the Free Software Foundation. This program is distributed in the hope   *
  * that it will be useful, but WITHOUT ANY WARRANTY, without even the implied *
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.           *
@@ -11,8 +12,7 @@
  * with this program, if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  * For the text or an alternative of this public license, you may reach us    *
- * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
- * or via info@compiere.org or http://www.compiere.org/license.html           *
+ * or via info@adempiere.net or http://www.adempiere.net/license.html         *
  *****************************************************************************/
 package org.compiere.model;
 
@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_BPartner
  *  @author Adempiere (generated) 
- *  @version Release 3.8.0
+ *  @version Release 3.9.2
  */
 public interface I_C_BPartner 
 {
@@ -88,6 +88,24 @@ public interface I_C_BPartner
 	  */
 	public int getAD_Org_ID();
 
+    /** Column name APEnquiry */
+    public static final String COLUMNNAME_APEnquiry = "APEnquiry";
+
+	/** Set AP Enquiry	  */
+	public void setAPEnquiry (String APEnquiry);
+
+	/** Get AP Enquiry	  */
+	public String getAPEnquiry();
+
+    /** Column name AREnquiry */
+    public static final String COLUMNNAME_AREnquiry = "AREnquiry";
+
+	/** Set AR Enquiry	  */
+	public void setAREnquiry (String AREnquiry);
+
+	/** Get AR Enquiry	  */
+	public String getAREnquiry();
+
     /** Column name AcqusitionCost */
     public static final String COLUMNNAME_AcqusitionCost = "AcqusitionCost";
 
@@ -127,6 +145,45 @@ public interface I_C_BPartner
 	  */
 	public int getBPartner_Parent_ID();
 
+	public org.compiere.model.I_C_BPartner getBPartner_Parent() throws RuntimeException;
+
+    /** Column name Birthday */
+    public static final String COLUMNNAME_Birthday = "Birthday";
+
+	/** Set Birthday.
+	  * Birthday or Anniversary day
+	  */
+	public void setBirthday (Timestamp Birthday);
+
+	/** Get Birthday.
+	  * Birthday or Anniversary day
+	  */
+	public Timestamp getBirthday();
+
+    /** Column name BloodGroup */
+    public static final String COLUMNNAME_BloodGroup = "BloodGroup";
+
+	/** Set Blood Group	  */
+	public void setBloodGroup (String BloodGroup);
+
+	/** Get Blood Group	  */
+	public String getBloodGroup();
+
+    /** Column name C_BP_AccountType_ID */
+    public static final String COLUMNNAME_C_BP_AccountType_ID = "C_BP_AccountType_ID";
+
+	/** Set Account Type.
+	  * Account Type classification for Business Partner
+	  */
+	public void setC_BP_AccountType_ID (int C_BP_AccountType_ID);
+
+	/** Get Account Type.
+	  * Account Type classification for Business Partner
+	  */
+	public int getC_BP_AccountType_ID();
+
+	public org.spin.model.I_C_BP_AccountType getC_BP_AccountType() throws RuntimeException;
+
     /** Column name C_BP_Group_ID */
     public static final String COLUMNNAME_C_BP_Group_ID = "C_BP_Group_ID";
 
@@ -141,6 +198,51 @@ public interface I_C_BPartner
 	public int getC_BP_Group_ID();
 
 	public org.compiere.model.I_C_BP_Group getC_BP_Group() throws RuntimeException;
+
+    /** Column name C_BP_IndustryType_ID */
+    public static final String COLUMNNAME_C_BP_IndustryType_ID = "C_BP_IndustryType_ID";
+
+	/** Set Industry Type.
+	  * Business Partner Industry Type or classification
+	  */
+	public void setC_BP_IndustryType_ID (int C_BP_IndustryType_ID);
+
+	/** Get Industry Type.
+	  * Business Partner Industry Type or classification
+	  */
+	public int getC_BP_IndustryType_ID();
+
+	public org.spin.model.I_C_BP_IndustryType getC_BP_IndustryType() throws RuntimeException;
+
+    /** Column name C_BP_SalesGroup_ID */
+    public static final String COLUMNNAME_C_BP_SalesGroup_ID = "C_BP_SalesGroup_ID";
+
+	/** Set Sales Group.
+	  * Sales Group
+	  */
+	public void setC_BP_SalesGroup_ID (int C_BP_SalesGroup_ID);
+
+	/** Get Sales Group.
+	  * Sales Group
+	  */
+	public int getC_BP_SalesGroup_ID();
+
+	public org.spin.model.I_C_BP_SalesGroup getC_BP_SalesGroup() throws RuntimeException;
+
+    /** Column name C_BP_Segment_ID */
+    public static final String COLUMNNAME_C_BP_Segment_ID = "C_BP_Segment_ID";
+
+	/** Set Segment.
+	  * Business Partner Segment
+	  */
+	public void setC_BP_Segment_ID (int C_BP_Segment_ID);
+
+	/** Get Segment.
+	  * Business Partner Segment
+	  */
+	public int getC_BP_Segment_ID();
+
+	public org.spin.model.I_C_BP_Segment getC_BP_Segment() throws RuntimeException;
 
     /** Column name C_BPartner_ID */
     public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
@@ -242,6 +344,15 @@ public interface I_C_BPartner
 	  */
 	public int getCreatedBy();
 
+    /** Column name CustomerOpenInvoices */
+    public static final String COLUMNNAME_CustomerOpenInvoices = "CustomerOpenInvoices";
+
+	/** Set Customer Open Invoices	  */
+	public void setCustomerOpenInvoices (String CustomerOpenInvoices);
+
+	/** Get Customer Open Invoices	  */
+	public String getCustomerOpenInvoices();
+
     /** Column name DUNS */
     public static final String COLUMNNAME_DUNS = "DUNS";
 
@@ -316,6 +427,19 @@ public interface I_C_BPartner
 	/** Get Dunning Grace Date	  */
 	public Timestamp getDunningGrace();
 
+    /** Column name FathersName */
+    public static final String COLUMNNAME_FathersName = "FathersName";
+
+	/** Set Father's Name.
+	  * Father's Name
+	  */
+	public void setFathersName (String FathersName);
+
+	/** Get Father's Name.
+	  * Father's Name
+	  */
+	public String getFathersName();
+
     /** Column name FirstSale */
     public static final String COLUMNNAME_FirstSale = "FirstSale";
 
@@ -354,6 +478,15 @@ public interface I_C_BPartner
 	  * Method for charging Freight
 	  */
 	public String getFreightCostRule();
+
+    /** Column name Gender */
+    public static final String COLUMNNAME_Gender = "Gender";
+
+	/** Set Gender	  */
+	public void setGender (String Gender);
+
+	/** Get Gender	  */
+	public String getGender();
 
     /** Column name InvoiceRule */
     public static final String COLUMNNAME_InvoiceRule = "InvoiceRule";
@@ -574,6 +707,15 @@ public interface I_C_BPartner
 
 	public org.compiere.model.I_M_PriceList getM_PriceList() throws RuntimeException;
 
+    /** Column name MaritalStatus */
+    public static final String COLUMNNAME_MaritalStatus = "MaritalStatus";
+
+	/** Set Marital Status	  */
+	public void setMaritalStatus (String MaritalStatus);
+
+	/** Get Marital Status	  */
+	public String getMaritalStatus();
+
     /** Column name NAICS */
     public static final String COLUMNNAME_NAICS = "NAICS";
 
@@ -612,6 +754,15 @@ public interface I_C_BPartner
 	  * Additional Name
 	  */
 	public String getName2();
+
+    /** Column name NotPosted */
+    public static final String COLUMNNAME_NotPosted = "NotPosted";
+
+	/** Set Not Posted	  */
+	public void setNotPosted (String NotPosted);
+
+	/** Get Not Posted	  */
+	public String getNotPosted();
 
     /** Column name NumberEmployees */
     public static final String COLUMNNAME_NumberEmployees = "NumberEmployees";
@@ -709,6 +860,21 @@ public interface I_C_BPartner
 	  * Purchase payment option
 	  */
 	public String getPaymentRulePO();
+
+    /** Column name PlaceOfBirth_ID */
+    public static final String COLUMNNAME_PlaceOfBirth_ID = "PlaceOfBirth_ID";
+
+	/** Set Place of Birth (Location).
+	  * Place of Birth (Location)
+	  */
+	public void setPlaceOfBirth_ID (int PlaceOfBirth_ID);
+
+	/** Get Place of Birth (Location).
+	  * Place of Birth (Location)
+	  */
+	public int getPlaceOfBirth_ID();
+
+	public I_C_Location getPlaceOfBirth() throws RuntimeException;
 
     /** Column name PotentialLifeTimeValue */
     public static final String COLUMNNAME_PotentialLifeTimeValue = "PotentialLifeTimeValue";
@@ -907,6 +1073,28 @@ public interface I_C_BPartner
 	  */
 	public String getURL();
 
+    /** Column name UUID */
+    public static final String COLUMNNAME_UUID = "UUID";
+
+	/** Set Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public void setUUID (String UUID);
+
+	/** Get Immutable Universally Unique Identifier.
+	  * Immutable Universally Unique Identifier
+	  */
+	public String getUUID();
+
+    /** Column name UnappliedPayments */
+    public static final String COLUMNNAME_UnappliedPayments = "UnappliedPayments";
+
+	/** Set Unapplied Payments	  */
+	public void setUnappliedPayments (String UnappliedPayments);
+
+	/** Get Unapplied Payments	  */
+	public String getUnappliedPayments();
+
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";
 
@@ -935,4 +1123,13 @@ public interface I_C_BPartner
 	  * Search key for the record in the format required - must be unique
 	  */
 	public String getValue();
+
+    /** Column name VendorOpenInvoices */
+    public static final String COLUMNNAME_VendorOpenInvoices = "VendorOpenInvoices";
+
+	/** Set Vendor Open Invoices	  */
+	public void setVendorOpenInvoices (String VendorOpenInvoices);
+
+	/** Get Vendor Open Invoices	  */
+	public String getVendorOpenInvoices();
 }

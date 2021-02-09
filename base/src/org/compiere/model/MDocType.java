@@ -20,6 +20,7 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Properties;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.compiere.util.CCache;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -43,6 +44,32 @@ public class MDocType extends X_C_DocType
 	private static final long serialVersionUID = -1406832071359080959L;
 
 	/**
+	 * Return the first Doc Type for this Document subtype sales order
+	 * @param orgId
+	 * @param docBaseType
+	 * @param docSubTypeSO
+     * @return
+     */
+	static public int getDocTypeBaseOnSubType(int orgId , String docBaseType , String docSubTypeSO)
+	{
+		Integer documentId = null;
+		for (MDocType docType : MDocType.getOfDocBaseType(Env.getCtx() , docBaseType))
+		{
+			if (docSubTypeSO != null
+					&& docSubTypeSO.equals(docType.getDocSubTypeSO())
+					&& docType.getAD_Org_ID() == orgId)
+				documentId = docType.get_ID();
+		}
+
+		for (MDocType docType : MDocType.getOfDocBaseType(Env.getCtx() , docBaseType))
+		{
+			if (docSubTypeSO != null
+					&& docSubTypeSO.equals(docType.getDocSubTypeSO()))
+				documentId = docType.get_ID();
+		}
+		return documentId;
+	}
+	/**
 	 * Return the first Doc Type for this BaseType
 	 * @param DocBaseType
 	 * @return
@@ -52,7 +79,29 @@ public class MDocType extends X_C_DocType
 		MDocType[] doc = MDocType.getOfDocBaseType(Env.getCtx(), DocBaseType);
 		return doc.length > 0 ? doc[0].get_ID() : 0;
 	}
-	
+
+	/**
+	 * Get document type based on organization
+	 *
+	 * @param docBaseType Document Type Base
+	 * @param AD_Org_ID   Organization ID
+	 * @return C_DocType_ID
+	 */
+
+	static public int getDocType(String docBaseType, int AD_Org_ID) {
+		MDocType[] docs = MDocType.getOfDocBaseType(Env.getCtx(), docBaseType);
+
+		if (docs == null || docs.length == 0) {
+			throw new AdempiereException("@C_DocType_ID@ @NotFound@ " + docBaseType);
+		} else {
+			for (MDocType doc : docs)
+				if (doc.getAD_Org_ID() == AD_Org_ID)
+					return doc.getC_DocType_ID();
+
+			return docs[0].getC_DocType_ID();
+		}
+	}
+
 	/**
 	 * 	Get Client Document Type with DocBaseType
 	 *	@param ctx context
@@ -69,6 +118,8 @@ public class MDocType extends X_C_DocType
 									.list();
 		return list.toArray(new MDocType[list.size()]);
 	}	//	getOfDocBaseType
+
+
 	
 	/**
 	 * 	Get Client Document Types
